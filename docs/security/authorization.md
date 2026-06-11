@@ -25,9 +25,31 @@ Role bazowe:
 
 - `owner`: pełny dostęp do organizacji, projektów, deploymentów, billing, API keys i członkostw.
 - `admin`: zarządzanie projektami, deploymentami, domenami, API keys i członkostwami bez billing manage.
-- `developer`: odczyt projektów, deploymenty i logi.
+- `developer`: tworzenie i odczyt projektów, deploymenty i logi.
 - `billing`: billing view/manage bez dostępu projektowego.
 - `viewer`: odczyt projektów, logów i billing view bez zmian.
+
+Organization API stosuje dodatkowe zasady:
+
+- lista organizacji jest filtrowana wyłącznie przez aktywne członkostwo użytkownika;
+- szczegóły organizacji są dostępne tylko dla aktywnych członków tej organizacji;
+- aktualizacja organizacji wymaga `organization.manage`;
+- soft delete organizacji jest dozwolony tylko dla roli `owner`;
+- zarządzanie członkami wymaga `member.manage`, czyli w bazowym modelu `owner` albo `admin`;
+- nie wolno usunąć ostatniego aktywnego ownera;
+- nie wolno obniżyć roli ostatniego aktywnego ownera.
+
+Project API stosuje dodatkowe zasady:
+
+- lista projektów zawsze wymaga `organization_public_id` w URL i aktywnego członkostwa w tej organizacji;
+- lista projektów domyślnie ukrywa projekty z `deleted_at` oraz statusem `deleted`;
+- utworzenie projektu wymaga `project.create`, czyli w bazowym modelu `owner`, `admin` albo `developer`;
+- rola `billing` nie może tworzyć projektów, o ile centralna polityka RBAC nie zostanie jawnie zmieniona;
+- rola `viewer` ma tylko odczyt;
+- aktualizacja, archiwizacja, przywrócenie i soft delete projektu wymagają `project.manage`;
+- lookup projektu musi być wykonywany przez organizację z URL, np. `Project.objects.filter(organization=organization, ...)`;
+- tworzenie projektu musi przejść przez moduł entitlements. Brak konfiguracji entitlementów ma być odmową dostępu, a nie domyślnym allow;
+- każda akcja mutująca zapisuje `AuditLog`.
 
 Uprawnienia są sprawdzane per akcja przez permission keys, np.:
 
@@ -170,6 +192,7 @@ class DeploymentView(APIView):
 - Nie wolno ufać `organization_id` przekazanemu w body requestu.
 - Nie wolno filtrować danych tenantowych wyłącznie w UI.
 - Nie wolno zwracać globalnych list projektów, domen, deploymentów, faktur, logów ani API keys.
+- Nie wolno zwracać globalnej listy organizacji; lista musi wynikać z `OrganizationMember`.
 - Nie wolno sprawdzać wyłącznie `request.user.is_authenticated` dla zasobów organizacyjnych.
 - Nie wolno używać globalnych ról użytkownika do decyzji tenantowych.
 - Nie wolno zakładać, że posiadanie UUID zasobu oznacza prawo dostępu.
@@ -236,5 +259,8 @@ Każdy moduł tenantowy musi mieć testy:
 - dostęp do zasobu innej organizacji przez `public_id` zwraca `404` albo `403` bez ujawnienia danych;
 - API key przypisany do projektu nie może odczytać ani zmienić innego projektu w tej samej organizacji;
 - queryset listujący zwraca wyłącznie zasoby organizacji z URL;
+- queryset listujący organizacje zwraca wyłącznie organizacje, w których użytkownik ma aktywne członkostwo;
+- testy członkostwa obejmują owner/admin/developer/billing/viewer oraz użytkownika spoza organizacji;
+- testy członkostwa blokują usunięcie lub downgrade ostatniego ownera;
 - każda akcja viewsetu ma przypisany permission key;
 - job asynchroniczny ponownie sprawdza organizację i ownership zasobu.

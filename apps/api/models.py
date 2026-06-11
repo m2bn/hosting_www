@@ -442,7 +442,7 @@ class Plan(TimeStampedModel):
     key = models.CharField(max_length=100, unique=True)
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=32, choices=PlanStatus.choices, default=PlanStatus.ACTIVE)
-    stripe_price_id = models.CharField(max_length=255, unique=True)
+    stripe_price_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     limits = models.JSONField(default=dict)
     features = models.JSONField(default=dict)
 
@@ -456,20 +456,20 @@ class Plan(TimeStampedModel):
 
 
 class SubscriptionStatus(models.TextChoices):
+    INCOMPLETE = "incomplete", "Incomplete"
     TRIALING = "trialing", "Trialing"
     ACTIVE = "active", "Active"
     PAST_DUE = "past_due", "Past due"
+    CANCELED = "canceled", "Canceled"
     UNPAID = "unpaid", "Unpaid"
     CANCELLED = "cancelled", "Cancelled"
-    INCOMPLETE = "incomplete", "Incomplete"
-    PAUSED = "paused", "Paused"
 
 
 class Subscription(TimeStampedModel):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="subscriptions")
     plan = models.ForeignKey(Plan, on_delete=models.PROTECT, related_name="subscriptions")
-    stripe_customer_id = models.CharField(max_length=255)
-    stripe_subscription_id = models.CharField(max_length=255, unique=True)
+    stripe_customer_id = models.CharField(max_length=255, blank=True)
+    stripe_subscription_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     status = models.CharField(max_length=32, choices=SubscriptionStatus.choices, default=SubscriptionStatus.INCOMPLETE)
     current_period_start = models.DateTimeField(null=True, blank=True)
     current_period_end = models.DateTimeField(null=True, blank=True)

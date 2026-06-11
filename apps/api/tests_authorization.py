@@ -227,6 +227,12 @@ class AuthorizationTestCase(TestCase):
 
         self.assertFalse(HasOrganizationPermission().has_permission(request, view))
 
+        request, view = self.make_request(self.users[ROLE_DEVELOPER])
+        view.action = "create"
+        view.permission_required_by_action = {"create": PermissionKey.PROJECT_CREATE}
+
+        self.assertTrue(HasOrganizationPermission().has_permission(request, view))
+
     def test_get_object_for_organization_or_404_never_uses_global_project_lookup(self):
         project = get_object_for_organization_or_404(
             Project,

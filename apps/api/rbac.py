@@ -70,6 +70,7 @@ ROLE_PERMISSIONS = {
         {
             PermissionKey.ORGANIZATION_VIEW,
             PermissionKey.PROJECT_VIEW,
+            PermissionKey.PROJECT_CREATE,
             PermissionKey.DEPLOYMENT_WRITE,
             PermissionKey.LOGS_READ,
         }
