@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.api import api_key_views, auth_views, billing_views, organization_views, project_views, secret_views, static_deployment_views
+from apps.api import api_key_views, auth_views, billing_views, certificate_views, container_deployment_views, domain_views, metering_views, organization_views, project_views, secret_views, static_deployment_views
 
 
 urlpatterns = [
@@ -44,6 +44,16 @@ urlpatterns = [
         name="billing-checkout",
     ),
     path(
+        "organizations/<uuid:organization_public_id>/usage/",
+        metering_views.UsageSummaryView.as_view(),
+        name="usage-summary",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/usage/prometheus/",
+        metering_views.UsagePrometheusView.as_view(),
+        name="usage-prometheus",
+    ),
+    path(
         "organizations/<uuid:organization_public_id>/api-keys/",
         api_key_views.OrganizationApiKeyListCreateView.as_view(),
         name="organization-api-key-list",
@@ -77,6 +87,41 @@ urlpatterns = [
         "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/deployments/static/",
         static_deployment_views.StaticDeploymentCreateView.as_view(),
         name="static-deployment-create",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/domains/",
+        domain_views.DomainListCreateView.as_view(),
+        name="domain-list",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/domains/<uuid:domain_public_id>/",
+        domain_views.DomainDetailView.as_view(),
+        name="domain-detail",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/domains/<uuid:domain_public_id>/verify/",
+        domain_views.DomainVerifyView.as_view(),
+        name="domain-verify",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/domains/<uuid:domain_public_id>/certificates/",
+        certificate_views.CertificateListView.as_view(),
+        name="certificate-list",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/deployments/container/",
+        container_deployment_views.ContainerDeploymentCreateView.as_view(),
+        name="container-deployment-create",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/deployments/container/<uuid:deployment_public_id>/logs/",
+        container_deployment_views.ContainerDeploymentLogsView.as_view(),
+        name="container-deployment-logs",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/deployments/container/<uuid:deployment_public_id>/rollback/",
+        container_deployment_views.ContainerDeploymentRollbackView.as_view(),
+        name="container-deployment-rollback",
     ),
     path(
         "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/deployments/<uuid:deployment_public_id>/rollback/",

@@ -1,4 +1,8 @@
 import uuid
+from contextvars import ContextVar
+
+
+request_id_var = ContextVar("request_id", default="")
 
 
 class RequestIdMiddleware:
@@ -10,7 +14,11 @@ class RequestIdMiddleware:
 
     def __call__(self, request):
         request_id = request.META.get(self.header_name) or str(uuid.uuid4())
+        token = request_id_var.set(request_id)
         request.request_id = request_id
-        response = self.get_response(request)
-        response.headers.setdefault(self.response_header_name, request_id)
-        return response
+        try:
+            response = self.get_response(request)
+            response.headers.setdefault(self.response_header_name, request_id)
+            return response
+        finally:
+            request_id_var.reset(token)

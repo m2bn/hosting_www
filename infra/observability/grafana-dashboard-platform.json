@@ -1,0 +1,82 @@
+{
+  "title": "SaaS Hosting Platform Baseline",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["platform", "baseline"],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "API Request Rate",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "sum(rate(platform_http_requests_total[5m])) by (service)", "legendFormat": "{{service}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "API p95 Latency",
+      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(platform_http_request_duration_seconds_bucket[5m])) by (le, service))", "legendFormat": "{{service}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "API Error Rate",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "sum(rate(platform_http_errors_total[5m])) / clamp_min(sum(rate(platform_http_requests_total[5m])), 1)", "legendFormat": "error rate"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Database p95 Latency",
+      "gridPos": {"x": 0, "y": 6, "w": 8, "h": 6},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(platform_database_query_duration_seconds_bucket[5m])) by (le))", "legendFormat": "db p95"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue Depth",
+      "gridPos": {"x": 8, "y": 6, "w": 8, "h": 6},
+      "targets": [{"expr": "platform_queue_depth", "legendFormat": "{{queue}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Celery Task Duration p95",
+      "gridPos": {"x": 16, "y": 6, "w": 8, "h": 6},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(platform_celery_task_duration_seconds_bucket[5m])) by (le, task))", "legendFormat": "{{task}}"}]
+    },
+    {
+      "type": "stat",
+      "title": "Active Projects",
+      "gridPos": {"x": 0, "y": 12, "w": 6, "h": 4},
+      "targets": [{"expr": "platform_active_projects", "legendFormat": "projects"}]
+    },
+    {
+      "type": "stat",
+      "title": "Active Subscriptions",
+      "gridPos": {"x": 6, "y": 12, "w": 6, "h": 4},
+      "targets": [{"expr": "platform_active_subscriptions", "legendFormat": "subscriptions"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Deployment Failures",
+      "gridPos": {"x": 12, "y": 12, "w": 6, "h": 4},
+      "targets": [{"expr": "sum(rate(platform_deployment_failures_total[15m]))", "legendFormat": "failures"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Stripe Payment Failures",
+      "gridPos": {"x": 18, "y": 12, "w": 6, "h": 4},
+      "targets": [{"expr": "increase(platform_billing_payment_failures_total[1h])", "legendFormat": "payment failures"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Storage Usage Ratio",
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 6},
+      "targets": [{"expr": "platform_usage_storage_ratio", "legendFormat": "{{organization}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Transfer Usage",
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 6},
+      "targets": [{"expr": "platform_usage_transfer_gb", "legendFormat": "{{organization}}"}]
+    }
+  ]
+}

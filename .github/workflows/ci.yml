@@ -1,0 +1,295 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  DJANGO_SETTINGS_MODULE: config.settings.test
+
+jobs:
+  lint-backend:
+    name: Lint backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install lint tools
+        run: python -m pip install --upgrade pip ruff
+
+      - name: Run Ruff
+        run: ruff check .
+
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Check Django project
+        run: python manage.py check
+
+      - name: Check migrations are committed
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run backend test suite
+        run: python manage.py test
+
+  django-production-check:
+    name: Django production deploy check
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_SECRET_KEY: ci-only-secret-key-ci-only-secret-key-ci-only-secret-key
+      DJANGO_ALLOWED_HOSTS: api.example.test,app.example.test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run Django deploy checks
+        run: python manage.py check --deploy
+
+  security-tests:
+    name: Security tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run security test suite
+        run: python manage.py test tests.security apps.api.tests_secure_configuration apps.api.tests_authentication apps.api.tests_api_keys
+
+  dependency-scanning:
+    name: Dependency scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install audit tool
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pip-audit
+
+      - name: Audit Python dependencies
+        run: pip-audit --strict
+
+  secret-scanning:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast:
+    name: SAST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install Semgrep
+        run: python -m pip install --upgrade pip semgrep
+
+      - name: Run Semgrep
+        run: semgrep scan --config p/owasp-top-ten --config p/secrets --error --severity ERROR --severity WARNING
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+
+  container-image-scanning:
+    name: Container image scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check whether Dockerfiles exist
+        id: dockerfiles
+        shell: bash
+        run: |
+          mapfile -t files < <(find . -name Dockerfile -not -path './.git/*')
+          printf '%s\n' "${files[@]}" > dockerfiles.txt
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No Dockerfiles found; skipping image scanning."
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Trivy
+        if: steps.dockerfiles.outputs.found == 'true'
+        uses: aquasecurity/setup-trivy@v0.2.2
+
+      - name: Build and scan Docker images
+        if: steps.dockerfiles.outputs.found == 'true'
+        shell: bash
+        run: |
+          while IFS= read -r dockerfile; do
+            context="$(dirname "$dockerfile")"
+            image="local-scan:${GITHUB_SHA::12}-$(echo "$context" | tr '/.' '--')"
+            docker build --pull --file "$dockerfile" --tag "$image" "$context"
+            trivy image --exit-code 1 --severity CRITICAL --no-progress "$image"
+          done < dockerfiles.txt
+
+  kubernetes-manifests:
+    name: Kubernetes manifests and policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL -o kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf kubeconform.tar.gz kubeconform
+          sudo mv kubeconform /usr/local/bin/kubeconform
+
+      - name: Render Helm chart
+        run: |
+          mkdir -p build/manifest-checks
+          helm lint infra/helm/customer-runtime
+          helm template customer-runtime infra/helm/customer-runtime > build/manifest-checks/customer-runtime.yaml
+
+      - name: Validate Kubernetes manifests
+        run: |
+          kubeconform -strict -summary infra/kubernetes/*.yaml build/manifest-checks/*.yaml
+
+      - name: Install Kyverno CLI
+        uses: kyverno/action-install-cli@v0.2.0
+
+      - name: Check Kyverno policies
+        run: |
+          kyverno apply infra/policies/kyverno-runtime-baseline.yaml --resource infra/kubernetes/customer-runtime-baseline.yaml
+          kyverno apply infra/policies/kyverno-runtime-baseline.yaml --resource build/manifest-checks/customer-runtime.yaml
+
+  ci-required:
+    name: CI required status
+    runs-on: ubuntu-latest
+    needs:
+      - lint-backend
+      - backend-tests
+      - django-production-check
+      - security-tests
+      - dependency-scanning
+      - secret-scanning
+      - sast
+      - sbom
+      - container-image-scanning
+      - kubernetes-manifests
+    if: always()
+    steps:
+      - name: Require all CI jobs
+        shell: bash
+        run: |
+          failed=0
+          for result in \
+            "${{ needs.lint-backend.result }}" \
+            "${{ needs.backend-tests.result }}" \
+            "${{ needs.django-production-check.result }}" \
+            "${{ needs.security-tests.result }}" \
+            "${{ needs.dependency-scanning.result }}" \
+            "${{ needs.secret-scanning.result }}" \
+            "${{ needs.sast.result }}" \
+            "${{ needs.sbom.result }}" \
+            "${{ needs.container-image-scanning.result }}" \
+            "${{ needs.kubernetes-manifests.result }}"; do
+            if [ "$result" != "success" ]; then
+              failed=1
+              echo "Required job result: $result"
+            fi
+          done
+          exit "$failed"

@@ -22,6 +22,7 @@ from apps.api.auth_utils import (
     verify_totp,
 )
 from apps.api.models import AuditResult, AuthTokenPurpose, TwoFactorDevice, User
+from apps.api.notifications import send_email_verification, send_password_reset
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
@@ -45,6 +46,7 @@ class RegisterView(View):
 
         user = User.objects.create_user(email=email, password=password, full_name=full_name)
         raw_token, _ = create_email_verification_token(user)
+        send_email_verification(user, raw_token, request=request)
         audit_event(request, AuditAction.AUTH_REGISTERED, AuditResult.SUCCESS, user=user)
         response = {"public_id": str(user.public_id), "email": user.email}
         if settings.AUTH_RETURN_DEBUG_TOKENS:
@@ -103,7 +105,8 @@ class PasswordResetRequestView(View):
         email = (data.get("email") or "").strip().lower()
         user = User.objects.filter(email=email, is_active=True).first()
         if user:
-            create_password_reset_token(user)
+            raw_token, _ = create_password_reset_token(user)
+            send_password_reset(user, raw_token, request=request)
             audit_event(request, AuditAction.AUTH_PASSWORD_RESET_REQUESTED, AuditResult.SUCCESS, user=user)
         else:
             audit_event(request, AuditAction.AUTH_PASSWORD_RESET_REQUESTED, AuditResult.SUCCESS)

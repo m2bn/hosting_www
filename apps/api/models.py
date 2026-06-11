@@ -451,10 +451,10 @@ class Domain(TimeStampedModel, SoftDeleteModel):
 
 class CertificateStatus(models.TextChoices):
     PENDING = "pending", "Pending"
-    ISSUED = "issued", "Issued"
-    RENEWING = "renewing", "Renewing"
+    ISSUING = "issuing", "Issuing"
+    ACTIVE = "active", "Active"
+    RENEWAL_PENDING = "renewal_pending", "Renewal pending"
     FAILED = "failed", "Failed"
-    REVOKED = "revoked", "Revoked"
     EXPIRED = "expired", "Expired"
 
 
@@ -817,6 +817,35 @@ class WebhookEvent(TimeStampedModel):
         ]
         indexes = [
             models.Index(fields=["status", "received_at"], name="api_webhook_status_recv_idx"),
+        ]
+
+
+class NotificationStatus(models.TextChoices):
+    QUEUED = "queued", "Queued"
+    SENDING = "sending", "Sending"
+    SENT = "sent", "Sent"
+    FAILED = "failed", "Failed"
+    RATE_LIMITED = "rate_limited", "Rate limited"
+
+
+class NotificationMessage(TimeStampedModel):
+    organization = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name="notifications")
+    project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, blank=True, related_name="notifications")
+    recipient_email = models.EmailField()
+    recipient_email_hash = models.CharField(max_length=255)
+    event_type = models.CharField(max_length=100)
+    template_key = models.CharField(max_length=100)
+    subject = models.CharField(max_length=255)
+    context = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=32, choices=NotificationStatus.choices, default=NotificationStatus.QUEUED)
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.CharField(max_length=255, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["status", "created_at"], name="api_notif_status_created_idx"),
+            models.Index(fields=["recipient_email_hash", "created_at"], name="api_notif_rec_created_idx"),
         ]
 
 

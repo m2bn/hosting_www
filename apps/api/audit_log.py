@@ -54,10 +54,23 @@ class AuditAction:
     DEPLOYMENT_ROLLED_BACK = "deployment.rolled_back"
 
     DOMAIN_ADDED = "domain.added"
+    DOMAIN_VERIFIED = "domain.verified"
+    DOMAIN_ACTIVATED = "domain.activated"
+    DOMAIN_DISABLED = "domain.disabled"
+    DOMAIN_VERIFICATION_FAILED = "domain.verification_failed"
     DOMAIN_REMOVED = "domain.removed"
+    CERTIFICATE_REQUESTED = "certificate.requested"
+    CERTIFICATE_STATUS_CHANGED = "certificate.status_changed"
+    CERTIFICATE_RENEWAL_REQUESTED = "certificate.renewal_requested"
+    CERTIFICATE_EXPIRING = "certificate.expiring"
 
     BILLING_CHANGED = "billing.changed"
     BILLING_CHECKOUT_STARTED = "billing.checkout.started"
+    USAGE_LIMIT_THRESHOLD_REACHED = "usage.limit_threshold_reached"
+    USAGE_LIMIT_EXCEEDED = "usage.limit_exceeded"
+    NOTIFICATION_SENT = "notification.sent"
+    NOTIFICATION_FAILED = "notification.failed"
+    NOTIFICATION_RATE_LIMITED = "notification.rate_limited"
 
     API_KEY_CREATED = "api_key.created"
     API_KEY_USED_HIGH_RISK = "api_key.used_high_risk"

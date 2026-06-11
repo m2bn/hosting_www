@@ -90,6 +90,37 @@ STATIC_DEPLOYMENT_S3_BUCKET = os.environ.get("STATIC_DEPLOYMENT_S3_BUCKET", "")
 STATIC_DEPLOYMENT_S3_ENDPOINT_URL = os.environ.get("STATIC_DEPLOYMENT_S3_ENDPOINT_URL", "")
 STATIC_DEPLOYMENT_S3_REGION = os.environ.get("STATIC_DEPLOYMENT_S3_REGION", "us-east-1")
 
+CONTAINER_DEPLOYMENT_MAX_CONTEXT_ZIP_BYTES = int(os.environ.get("CONTAINER_DEPLOYMENT_MAX_CONTEXT_ZIP_BYTES", str(100 * 1024 * 1024)))
+CONTAINER_DEPLOYMENT_MAX_CONTEXT_BYTES = int(os.environ.get("CONTAINER_DEPLOYMENT_MAX_CONTEXT_BYTES", str(512 * 1024 * 1024)))
+CONTAINER_DEPLOYMENT_BUILD_TIMEOUT_SECONDS = int(os.environ.get("CONTAINER_DEPLOYMENT_BUILD_TIMEOUT_SECONDS", "1200"))
+CONTAINER_DEPLOYMENT_REGISTRY = os.environ.get("CONTAINER_DEPLOYMENT_REGISTRY", "registry.example.com/private")
+CONTAINER_DEPLOYMENT_BUILD_CPU_LIMIT = os.environ.get("CONTAINER_DEPLOYMENT_BUILD_CPU_LIMIT", "2")
+CONTAINER_DEPLOYMENT_BUILD_MEMORY_LIMIT = os.environ.get("CONTAINER_DEPLOYMENT_BUILD_MEMORY_LIMIT", "4Gi")
+CONTAINER_DEPLOYMENT_RUNTIME_CPU_LIMIT = os.environ.get("CONTAINER_DEPLOYMENT_RUNTIME_CPU_LIMIT", "1")
+CONTAINER_DEPLOYMENT_RUNTIME_MEMORY_LIMIT = os.environ.get("CONTAINER_DEPLOYMENT_RUNTIME_MEMORY_LIMIT", "512Mi")
+CONTAINER_DEPLOYMENT_DEFAULT_PORT = int(os.environ.get("CONTAINER_DEPLOYMENT_DEFAULT_PORT", "8080"))
+
+CUSTOM_DOMAIN_TXT_RECORD_PREFIX = os.environ.get("CUSTOM_DOMAIN_TXT_RECORD_PREFIX", "_platform-verify")
+CUSTOM_DOMAIN_SYSTEM_HOSTNAMES = {
+    hostname.strip().lower()
+    for hostname in os.environ.get("CUSTOM_DOMAIN_SYSTEM_HOSTNAMES", "localhost,example.com,example.test").split(",")
+    if hostname.strip()
+}
+CUSTOM_DOMAIN_SYSTEM_SUFFIXES = {
+    suffix.strip().lower().lstrip(".")
+    for suffix in os.environ.get("CUSTOM_DOMAIN_SYSTEM_SUFFIXES", "localhost,platform.local").split(",")
+    if suffix.strip()
+}
+CUSTOM_DOMAIN_CERT_MANAGER_PROVIDER = os.environ.get("CUSTOM_DOMAIN_CERT_MANAGER_PROVIDER", "cert-manager")
+CERTIFICATE_EXPIRY_ALERT_DAYS = int(os.environ.get("CERTIFICATE_EXPIRY_ALERT_DAYS", "14"))
+USAGE_VIEWER_CAN_VIEW_USAGE = os.environ.get("USAGE_VIEWER_CAN_VIEW_USAGE", "false").lower() in {"1", "true", "yes"}
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@example.com")
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+NOTIFICATION_BASE_URL = os.environ.get("NOTIFICATION_BASE_URL", "http://localhost:3000")
+NOTIFICATION_RATE_LIMIT_ATTEMPTS = int(os.environ.get("NOTIFICATION_RATE_LIMIT_ATTEMPTS", "20"))
+NOTIFICATION_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("NOTIFICATION_RATE_LIMIT_WINDOW_SECONDS", "3600"))
+NOTIFICATION_MAX_RETRY_ATTEMPTS = int(os.environ.get("NOTIFICATION_MAX_RETRY_ATTEMPTS", "3"))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -97,17 +128,20 @@ LOGGING = {
         "redact_secrets": {
             "()": "config.logging_filters.RedactSecretsFilter",
         },
+        "request_context": {
+            "()": "config.structured_logging.RequestContextFilter",
+        },
     },
     "formatters": {
-        "standard": {
-            "format": "%(levelname)s %(name)s %(message)s",
+        "json": {
+            "()": "config.structured_logging.JsonFormatter",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "filters": ["redact_secrets"],
-            "formatter": "standard",
+            "filters": ["redact_secrets", "request_context"],
+            "formatter": "json",
         },
     },
     "root": {

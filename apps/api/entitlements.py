@@ -141,6 +141,12 @@ def can_deploy_project(project):
             "Container deployments are not enabled for this plan.",
             code="container_deployments_disabled",
         )
+    storage_decision = storage_usage_exceeds_limit(project.organization)
+    if not storage_decision.allowed:
+        return storage_decision
+    transfer_decision = transfer_usage_exceeds_limit(project.organization)
+    if not transfer_decision.allowed:
+        return transfer_decision
     return EntitlementDecision(True)
 
 
