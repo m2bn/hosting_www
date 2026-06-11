@@ -55,12 +55,18 @@ class AuditAction:
     DOMAIN_REMOVED = "domain.removed"
 
     BILLING_CHANGED = "billing.changed"
+    BILLING_CHECKOUT_STARTED = "billing.checkout.started"
 
     API_KEY_CREATED = "api_key.created"
+    API_KEY_USED_HIGH_RISK = "api_key.used_high_risk"
     API_KEY_DELETED = "api_key.deleted"
     API_KEY_ROTATED = "api_key.rotated"
 
     SECRET_CHANGED = "secret.changed"
+    SECRET_CREATED = "secret.created"
+    SECRET_UPDATED = "secret.updated"
+    SECRET_ROTATED = "secret.rotated"
+    SECRET_DELETED = "secret.deleted"
     OPERATOR_ACTION = "operator.action"
 
 

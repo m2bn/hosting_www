@@ -1,5 +1,7 @@
 from rest_framework.permissions import BasePermission
 
+from apps.api.api_keys import mark_api_key_used
+from apps.api.models import ApiKey, Project
 from apps.api.rbac import (
     ROLE_ADMIN,
     ROLE_BILLING,
@@ -60,7 +62,9 @@ class HasOrganizationPermission(OrganizationPermissionBase):
         if not required_permission:
             return False
         context = self.get_membership_context(request, view)
-        return bool(context and context.has_permission(required_permission))
+        if not context or not context.has_permission(required_permission):
+            return False
+        return self.has_api_key_permission(request, view, required_permission)
 
     def has_object_permission(self, request, view, obj):
         organization = self.get_organization(request, view)
@@ -72,7 +76,33 @@ class HasOrganizationPermission(OrganizationPermissionBase):
         obj_organization_id = getattr(obj, "organization_id", None)
         if obj_organization_id is not None and obj_organization_id != organization.id:
             return False
+        api_key = getattr(request, "auth", None)
+        if isinstance(api_key, ApiKey):
+            if api_key.organization_id != organization.id:
+                return False
+            if api_key.project_id:
+                if isinstance(obj, Project) and obj.id != api_key.project_id:
+                    return False
+                obj_project_id = getattr(obj, "project_id", None)
+                if obj_project_id is not None and obj_project_id != api_key.project_id:
+                    return False
         return self.has_permission(request, view)
+
+    def has_api_key_permission(self, request, view, required_permission):
+        api_key = getattr(request, "auth", None)
+        if not isinstance(api_key, ApiKey):
+            return True
+        organization = self.get_organization(request, view)
+        if organization is None or api_key.organization_id != organization.id:
+            return False
+        project_public_id = getattr(view, "kwargs", {}).get("project_public_id")
+        if api_key.project_id and project_public_id:
+            if not Project.objects.filter(id=api_key.project_id, public_id=project_public_id).exists():
+                return False
+        if required_permission not in api_key.scopes:
+            return False
+        mark_api_key_used(api_key, request=request, scope=required_permission)
+        return True
 
 
 class CanManageBilling(HasOrganizationPermission):

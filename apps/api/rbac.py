@@ -10,6 +10,7 @@ class PermissionKey:
     PROJECT_VIEW = "project.view"
     PROJECT_CREATE = "project.create"
     PROJECT_MANAGE = "project.manage"
+    SECRET_MANAGE = "secret.manage"
     DEPLOYMENT_WRITE = "deployment.write"
     DOMAIN_MANAGE = "domain.manage"
     LOGS_READ = "logs.read"
@@ -45,6 +46,7 @@ ROLE_PERMISSIONS = {
             PermissionKey.PROJECT_VIEW,
             PermissionKey.PROJECT_CREATE,
             PermissionKey.PROJECT_MANAGE,
+            PermissionKey.SECRET_MANAGE,
             PermissionKey.DEPLOYMENT_WRITE,
             PermissionKey.DOMAIN_MANAGE,
             PermissionKey.LOGS_READ,
@@ -60,6 +62,7 @@ ROLE_PERMISSIONS = {
             PermissionKey.PROJECT_VIEW,
             PermissionKey.PROJECT_CREATE,
             PermissionKey.PROJECT_MANAGE,
+            PermissionKey.SECRET_MANAGE,
             PermissionKey.DEPLOYMENT_WRITE,
             PermissionKey.DOMAIN_MANAGE,
             PermissionKey.LOGS_READ,
@@ -71,6 +74,7 @@ ROLE_PERMISSIONS = {
             PermissionKey.ORGANIZATION_VIEW,
             PermissionKey.PROJECT_VIEW,
             PermissionKey.PROJECT_CREATE,
+            PermissionKey.SECRET_MANAGE,
             PermissionKey.DEPLOYMENT_WRITE,
             PermissionKey.LOGS_READ,
         }

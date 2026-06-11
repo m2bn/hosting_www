@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 
@@ -67,6 +68,13 @@ AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS = 300
 AUTH_RETURN_DEBUG_TOKENS = False
 ENTITLEMENTS_NO_SUBSCRIPTION_POLICY = "free"
 ENTITLEMENTS_PAST_DUE_GRACE_DAYS = 7
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_CHECKOUT_SUCCESS_URL = os.environ.get("STRIPE_CHECKOUT_SUCCESS_URL", "http://localhost:3000/billing/success")
+STRIPE_CHECKOUT_CANCEL_URL = os.environ.get("STRIPE_CHECKOUT_CANCEL_URL", "http://localhost:3000/billing/cancel")
+STRIPE_TEST_MODE = os.environ.get("STRIPE_TEST_MODE", "true").lower() in {"1", "true", "yes"}
+API_KEY_RATE_LIMIT_ATTEMPTS = int(os.environ.get("API_KEY_RATE_LIMIT_ATTEMPTS", "120"))
+API_KEY_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("API_KEY_RATE_LIMIT_WINDOW_SECONDS", "60"))
 
 LOGGING = {
     "version": 1,

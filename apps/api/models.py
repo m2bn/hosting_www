@@ -88,6 +88,7 @@ class Organization(TimeStampedModel, SoftDeleteModel):
     slug = models.SlugField(max_length=120)
     status = models.CharField(max_length=32, choices=OrganizationStatus.choices, default=OrganizationStatus.ACTIVE)
     billing_email = models.EmailField(blank=True)
+    stripe_customer_id = models.CharField(max_length=255, blank=True)
     owner_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="owned_organizations")
 
     class Meta:
@@ -260,6 +261,52 @@ class Environment(TimeStampedModel, SoftDeleteModel):
     def clean(self):
         if self.project_id and self.organization_id and self.project.organization_id != self.organization_id:
             raise ValidationError({"organization": "Environment organization must match project organization."})
+
+
+class ProjectSecretStatus(models.TextChoices):
+    ACTIVE = "active", "Active"
+    DELETED = "deleted", "Deleted"
+
+
+class ProjectSecret(TimeStampedModel, SoftDeleteModel):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="project_secrets")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="secrets")
+    environment = models.ForeignKey(Environment, on_delete=models.CASCADE, related_name="secrets")
+    name = models.CharField(max_length=128)
+    status = models.CharField(max_length=32, choices=ProjectSecretStatus.choices, default=ProjectSecretStatus.ACTIVE)
+    metadata = models.JSONField(default=dict, blank=True)
+    current_version = models.PositiveIntegerField(default=1)
+    created_by_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_project_secrets")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["environment", "name"],
+                condition=Q(deleted_at__isnull=True),
+                name="uniq_active_secret_env_name",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["organization", "project", "environment", "status"], name="api_secret_scope_status_idx"),
+        ]
+
+    def clean(self):
+        validate_environment_scope(self.organization_id, self.project_id, self.environment)
+
+
+class ProjectSecretVersion(TimeStampedModel):
+    secret = models.ForeignKey(ProjectSecret, on_delete=models.CASCADE, related_name="versions")
+    version = models.PositiveIntegerField()
+    encrypted_value = models.TextField()
+    created_by_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_project_secret_versions")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["secret", "version"], name="uniq_secret_version"),
+        ]
+        indexes = [
+            models.Index(fields=["secret", "-version"], name="api_secret_version_idx"),
+        ]
 
 
 class BuildJobStatus(models.TextChoices):
