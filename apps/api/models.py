@@ -612,28 +612,56 @@ class AuditResult(models.TextChoices):
     FAILED = "failed", "Failed"
 
 
+class AuditLogQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise RuntimeError("AuditLog is append-only and cannot be updated.")
+
+    def delete(self):
+        raise RuntimeError("AuditLog is append-only and cannot be deleted.")
+
+
+class AuditLogManager(models.Manager.from_queryset(AuditLogQuerySet)):
+    pass
+
+
 class AuditLog(TimeStampedModel):
     organization = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name="audit_logs")
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, blank=True, related_name="audit_logs")
     actor_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="audit_logs")
     actor_type = models.CharField(max_length=32, choices=AuditActorType.choices)
+    actor_id = models.CharField(max_length=100, blank=True)
     actor_ref = models.CharField(max_length=255, blank=True)
     action = models.CharField(max_length=150)
     target_type = models.CharField(max_length=100)
     target_id = models.CharField(max_length=100)
     result = models.CharField(max_length=32, choices=AuditResult.choices)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=512, blank=True)
+    request_id = models.CharField(max_length=100, blank=True)
     ip_address_hash = models.CharField(max_length=255, blank=True)
     user_agent_hash = models.CharField(max_length=255, blank=True)
     correlation_id = models.CharField(max_length=100)
     metadata = models.JSONField(default=dict)
+
+    objects = AuditLogManager()
 
     class Meta:
         indexes = [
             models.Index(fields=["organization", "-created_at"], name="api_audit_org_created_idx"),
             models.Index(fields=["project", "-created_at"], name="api_audit_project_created_idx"),
             models.Index(fields=["actor_user", "-created_at"], name="api_audit_actor_created_idx"),
+            models.Index(fields=["actor_type", "actor_id"], name="api_audit_actor_type_id_idx"),
+            models.Index(fields=["request_id"], name="api_audit_request_id_idx"),
             models.Index(fields=["correlation_id"], name="api_audit_correlation_idx"),
         ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and AuditLog._base_manager.filter(pk=self.pk).exists():
+            raise RuntimeError("AuditLog is append-only and cannot be updated.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise RuntimeError("AuditLog is append-only and cannot be deleted.")
 
 
 class SecuritySeverity(models.TextChoices):
@@ -757,3 +785,77 @@ def validate_environment_scope(organization_id, project_id, environment):
         raise ValidationError({"environment": "Environment must belong to the same organization."})
     if project_id and environment.project_id != project_id:
         raise ValidationError({"environment": "Environment must belong to the same project."})
+
+
+class AuthTokenPurpose(models.TextChoices):
+    EMAIL_VERIFICATION = "email_verification", "Email verification"
+    PASSWORD_RESET = "password_reset", "Password reset"
+
+
+class AuthToken(TimeStampedModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="auth_tokens")
+    purpose = models.CharField(max_length=64, choices=AuthTokenPurpose.choices)
+    token_hash = models.CharField(max_length=255)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "purpose", "used_at"], name="api_authtoken_user_purpose_idx"),
+            models.Index(fields=["expires_at"], name="api_authtoken_expires_idx"),
+        ]
+
+    def set_token(self, raw_token):
+        self.token_hash = make_password(raw_token)
+
+    def check_token(self, raw_token):
+        return check_password(raw_token, self.token_hash)
+
+    @property
+    def is_usable(self):
+        return self.used_at is None and self.expires_at > timezone.now()
+
+    def mark_used(self):
+        self.used_at = timezone.now()
+        self.save(update_fields=["used_at", "updated_at"])
+
+
+class TwoFactorDevice(TimeStampedModel):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="two_factor_device")
+    secret = models.CharField(max_length=255)
+    enabled_at = models.DateTimeField(null=True, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["enabled_at"], name="api_2fa_enabled_idx"),
+        ]
+
+    @property
+    def is_enabled(self):
+        return self.enabled_at is not None
+
+
+class TwoFactorRecoveryCode(TimeStampedModel):
+    device = models.ForeignKey(TwoFactorDevice, on_delete=models.CASCADE, related_name="recovery_codes")
+    code_hash = models.CharField(max_length=255)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["device", "used_at"], name="api_2fa_recovery_used_idx"),
+        ]
+
+    def set_code(self, raw_code):
+        self.code_hash = make_password(raw_code)
+
+    def check_code(self, raw_code):
+        return check_password(raw_code, self.code_hash)
+
+    @property
+    def is_usable(self):
+        return self.used_at is None
+
+    def mark_used(self):
+        self.used_at = timezone.now()
+        self.save(update_fields=["used_at", "updated_at"])
