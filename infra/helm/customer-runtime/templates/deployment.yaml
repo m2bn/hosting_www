@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: runtime
+  namespace: {{ .Values.project.namespace | quote }}
+spec:
+  replicas: {{ .Values.runtime.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: runtime
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: runtime
+        platform.example.com/project-id: {{ .Values.project.projectId | quote }}
+        platform.example.com/environment-id: {{ .Values.project.environmentId | quote }}
+    spec:
+      automountServiceAccountToken: {{ .Values.runtime.automountServiceAccountToken }}
+      serviceAccountName: runtime
+      securityContext:
+        runAsNonRoot: {{ .Values.runtime.runAsNonRoot }}
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.runtime.containerPort }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: {{ .Values.runtime.readOnlyRootFilesystem }}
+            runAsNonRoot: {{ .Values.runtime.runAsNonRoot }}
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | quote }}
+              memory: {{ .Values.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu | quote }}
+              memory: {{ .Values.resources.limits.memory | quote }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.runtime.readinessPath | quote }}
+              port: {{ .Values.runtime.containerPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.runtime.livenessPath | quote }}
+              port: {{ .Values.runtime.containerPort }}
+            initialDelaySeconds: 15
+            periodSeconds: 20

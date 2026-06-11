@@ -75,6 +75,20 @@ STRIPE_CHECKOUT_CANCEL_URL = os.environ.get("STRIPE_CHECKOUT_CANCEL_URL", "http:
 STRIPE_TEST_MODE = os.environ.get("STRIPE_TEST_MODE", "true").lower() in {"1", "true", "yes"}
 API_KEY_RATE_LIMIT_ATTEMPTS = int(os.environ.get("API_KEY_RATE_LIMIT_ATTEMPTS", "120"))
 API_KEY_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("API_KEY_RATE_LIMIT_WINDOW_SECONDS", "60"))
+STATIC_DEPLOYMENT_MAX_ZIP_BYTES = int(os.environ.get("STATIC_DEPLOYMENT_MAX_ZIP_BYTES", str(50 * 1024 * 1024)))
+STATIC_DEPLOYMENT_MAX_FILES = int(os.environ.get("STATIC_DEPLOYMENT_MAX_FILES", "2000"))
+STATIC_DEPLOYMENT_MAX_UNPACKED_BYTES = int(os.environ.get("STATIC_DEPLOYMENT_MAX_UNPACKED_BYTES", str(500 * 1024 * 1024)))
+STATIC_DEPLOYMENT_ALLOWED_EXTENSIONS = set(
+    os.environ.get(
+        "STATIC_DEPLOYMENT_ALLOWED_EXTENSIONS",
+        ".html,.htm,.css,.js,.mjs,.json,.txt,.xml,.svg,.png,.jpg,.jpeg,.gif,.webp,.ico,.wasm,.map,.woff,.woff2",
+    ).split(",")
+)
+STATIC_DEPLOYMENT_STORAGE_BACKEND = os.environ.get("STATIC_DEPLOYMENT_STORAGE_BACKEND", "local")
+STATIC_DEPLOYMENT_LOCAL_ROOT = os.environ.get("STATIC_DEPLOYMENT_LOCAL_ROOT", str(BASE_DIR / "outputs" / "static-deployments"))
+STATIC_DEPLOYMENT_S3_BUCKET = os.environ.get("STATIC_DEPLOYMENT_S3_BUCKET", "")
+STATIC_DEPLOYMENT_S3_ENDPOINT_URL = os.environ.get("STATIC_DEPLOYMENT_S3_ENDPOINT_URL", "")
+STATIC_DEPLOYMENT_S3_REGION = os.environ.get("STATIC_DEPLOYMENT_S3_REGION", "us-east-1")
 
 LOGGING = {
     "version": 1,

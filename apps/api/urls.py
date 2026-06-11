@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.api import api_key_views, auth_views, billing_views, organization_views, project_views, secret_views
+from apps.api import api_key_views, auth_views, billing_views, organization_views, project_views, secret_views, static_deployment_views
 
 
 urlpatterns = [
@@ -72,6 +72,16 @@ urlpatterns = [
         "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/secrets/",
         secret_views.ProjectSecretListCreateView.as_view(),
         name="project-secret-list",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/deployments/static/",
+        static_deployment_views.StaticDeploymentCreateView.as_view(),
+        name="static-deployment-create",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/deployments/<uuid:deployment_public_id>/rollback/",
+        static_deployment_views.StaticDeploymentRollbackView.as_view(),
+        name="static-deployment-rollback",
     ),
     path(
         "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/secrets/<uuid:secret_public_id>/",

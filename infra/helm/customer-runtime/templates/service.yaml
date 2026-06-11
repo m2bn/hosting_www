@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: runtime
+  namespace: {{ .Values.project.namespace | quote }}
+spec:
+  selector:
+    app.kubernetes.io/name: runtime
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}

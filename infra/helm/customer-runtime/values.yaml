@@ -1,0 +1,41 @@
+project:
+  namespace: proj-example
+  organizationId: org-example
+  projectId: project-example
+  environmentId: env-example
+
+image:
+  repository: registry.example.com/customer/app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+quota:
+  requestsCpu: 500m
+  requestsMemory: 512Mi
+  limitsCpu: "1"
+  limitsMemory: 1Gi
+  pods: "4"
+
+network:
+  allowDnsEgress: true
+
+runtime:
+  replicas: 1
+  automountServiceAccountToken: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  containerPort: 8080
+  readinessPath: /healthz
+  livenessPath: /livez

@@ -144,6 +144,13 @@ def can_deploy_project(project):
     return EntitlementDecision(True)
 
 
+def can_deploy_static_site(project):
+    context = get_entitlement_context(project.organization)
+    if not context.resource_creation_allowed:
+        return _deny_for_subscription_status(context)
+    return EntitlementDecision(True)
+
+
 def can_use_custom_domain(organization):
     context = get_entitlement_context(organization)
     return _feature_decision(context, FEATURE_CUSTOM_DOMAINS, "custom_domains_disabled")

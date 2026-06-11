@@ -49,6 +49,8 @@ class AuditAction:
     PROJECT_DELETED = "project.deleted"
 
     DEPLOYMENT_STARTED = "deployment.started"
+    DEPLOYMENT_FAILED = "deployment.failed"
+    DEPLOYMENT_ACTIVATED = "deployment.active"
     DEPLOYMENT_ROLLED_BACK = "deployment.rolled_back"
 
     DOMAIN_ADDED = "domain.added"

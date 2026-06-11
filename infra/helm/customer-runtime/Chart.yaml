@@ -1,0 +1,6 @@
+apiVersion: v2
+name: customer-runtime
+description: Secure baseline runtime for customer project workloads.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
