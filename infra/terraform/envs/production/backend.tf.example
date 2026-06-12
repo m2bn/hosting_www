@@ -1,0 +1,12 @@
+# Configure an encrypted remote backend with state locking before applying.
+# Example shape only. Do not commit real backend credentials.
+#
+# terraform {
+#   backend "s3" {
+#     bucket         = "replace-with-terraform-state-bucket"
+#     key            = "hosting-platform/production/terraform.tfstate"
+#     region         = "replace-with-region"
+#     encrypt        = true
+#     dynamodb_table = "replace-with-lock-table"
+#   }
+# }

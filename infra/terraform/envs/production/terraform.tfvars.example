@@ -1,0 +1,91 @@
+environment  = "production"
+region       = "eu-central-1"
+name_prefix  = "hosting"
+network_cidr = "10.30.0.0/16"
+dns_zone     = "example.com"
+
+dns_records = [
+  {
+    name  = "app"
+    type  = "CNAME"
+    value = "replace-with-production-ingress.example.net"
+    ttl   = 300
+  },
+  {
+    name  = "*.apps"
+    type  = "CNAME"
+    value = "replace-with-production-runtime-ingress.example.net"
+    ttl   = 300
+  }
+]
+
+database = {
+  engine_version        = "16"
+  instance_class        = "production-medium"
+  storage_gb            = 200
+  backup_retention_days = 35
+  high_availability     = true
+}
+
+redis = {
+  engine_version    = "7"
+  instance_class    = "production-small"
+  high_availability = true
+}
+
+rabbitmq = {
+  engine_version    = "3.13"
+  instance_class    = "production-small"
+  high_availability = true
+}
+
+object_storage = {
+  bucket_name            = "replace-with-production-platform-bucket"
+  versioning_enabled     = true
+  object_lock_enabled    = true
+  retention_days         = 90
+  server_side_encryption = true
+  deployment_prefix      = "deployments/"
+  backup_prefix          = "backups/"
+}
+
+kubernetes = {
+  version = "1.30"
+  node_pools = {
+    system = {
+      instance_type = "production-medium"
+      min_size      = 3
+      max_size      = 6
+      desired_size  = 3
+    }
+    runtime = {
+      instance_type = "production-large"
+      min_size      = 3
+      max_size      = 20
+      desired_size  = 6
+    }
+  }
+  private_endpoint   = true
+  audit_logs_enabled = true
+}
+
+registry = {
+  name                   = "hosting-production"
+  immutable_tags         = true
+  vulnerability_scanning = true
+  retention_days         = 90
+}
+
+secrets = {
+  provider_name            = "replace-with-secrets-manager"
+  key_rotation_days        = 90
+  external_secrets_enabled = true
+}
+
+monitoring = {
+  prometheus_enabled = true
+  grafana_enabled    = true
+  loki_enabled       = true
+  retention_days     = 30
+  alert_email        = "platform-alerts@example.com"
+}
