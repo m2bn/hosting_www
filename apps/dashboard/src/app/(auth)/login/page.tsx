@@ -2,56 +2,70 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { apiRequest, ApiError } from "@/lib/api";
-import { Alert } from "@/components/ui/Alert";
+import { useRouter } from "next/navigation";
+import { login } from "@/lib/auth";
+import { hasErrors, validateEmail, validatePassword } from "@/lib/auth-validation";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { FormStatus } from "@/components/auth/FormStatus";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+    const nextErrors = {
+      email: validateEmail(email),
+      password: validatePassword(password),
+    };
+    setFieldErrors(nextErrors);
+    if (hasErrors(nextErrors)) {
+      return;
+    }
+    setIsSubmitting(true);
     try {
-      await apiRequest("/auth/login/", {
-        method: "POST",
-        body: {
-          email: form.get("email"),
-          password: form.get("password"),
-        },
-        csrf: true,
-      });
-      window.location.assign("/dashboard");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Login failed.");
+      const result = await login(email, password);
+      router.push(result.requires_two_factor ? "/two-factor" : "/dashboard");
+    } catch {
+      setError("Unable to sign in with those credentials.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-muted px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <p className="mt-1 text-sm text-subdued">Use your platform account. Sessions are stored in secure cookies.</p>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-4" onSubmit={onSubmit}>
-            {error ? <Alert variant="danger">{error}</Alert> : null}
-            <Input label="Email" name="email" type="email" autoComplete="email" required />
-            <Input label="Password" name="password" type="password" autoComplete="current-password" required />
-            <Button type="submit">Sign in</Button>
-          </form>
-          <p className="mt-4 text-sm text-subdued">
-            No account?{" "}
-            <Link href="/register" className="font-semibold text-brand-700">
-              Create one
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </main>
+    <AuthCard
+      title="Sign in"
+      description="Use your platform account. Sessions are kept in httpOnly cookies and protected with CSRF."
+      footer={
+        <>
+          No account?{" "}
+          <Link href="/register" className="font-semibold text-brand-700">
+            Create one
+          </Link>
+          <span className="mx-2 text-border">/</span>
+          <Link href="/forgot-password" className="font-semibold text-brand-700">
+            Forgot password?
+          </Link>
+        </>
+      }
+    >
+      <form className="grid gap-4" onSubmit={onSubmit} noValidate>
+        <FormStatus error={error} />
+        <Input label="Email" name="email" type="email" autoComplete="email" error={fieldErrors.email} required />
+        <Input label="Password" name="password" type="password" autoComplete="current-password" error={fieldErrors.password} required />
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Signing in..." : "Sign in"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

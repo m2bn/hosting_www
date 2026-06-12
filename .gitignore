@@ -4,6 +4,8 @@ out/
 dist/
 coverage/
 *.tsbuildinfo
+playwright-report/
+test-results/
 .env.local
 .env.*.local
 npm-debug.log*
