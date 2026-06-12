@@ -138,7 +138,21 @@ jobs:
           PY
 
       - name: Run security test suite
-        run: python manage.py test tests.security apps.api.tests_secure_configuration apps.api.tests_authentication apps.api.tests_api_keys
+        run: >
+          python manage.py test
+          tests.security
+          apps.api.tests_secure_configuration
+          apps.api.tests_authentication
+          apps.api.tests_authorization
+          apps.api.tests_api_keys
+          apps.api.tests_stripe_webhooks
+          apps.api.tests_static_deployments
+          apps.api.tests_container_deployments
+          apps.api.tests_custom_domains
+          apps.api.tests_secrets
+          apps.api.tests_organizations
+          apps.api.tests_projects
+          apps.api.tests_audit_log
 
   dependency-scanning:
     name: Dependency scanning
