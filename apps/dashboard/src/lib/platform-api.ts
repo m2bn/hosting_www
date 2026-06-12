@@ -76,9 +76,14 @@ export type ContainerDeploymentInput = {
 export type Domain = {
   id: string;
   hostname: string;
-  status: string;
+  status: DomainStatus;
   certificate_status?: string;
+  verification_record_name?: string;
+  verification_record_value?: string;
+  dns_instructions?: string[];
 };
+
+export type DomainStatus = "pending_verification" | "verified" | "active" | "failed" | "disabled";
 
 export type ProjectSettings = {
   id: string;
@@ -223,6 +228,29 @@ export async function rollbackDeployment(projectId: string, deploymentId: string
 
 export async function fetchProjectDomains(id: string): Promise<Domain[]> {
   return normalizeList(await apiRequest<ListResponse<Domain>>(`/projects/${id}/domains/`));
+}
+
+export async function createProjectDomain(projectId: string, hostname: string): Promise<Domain> {
+  return apiRequest<Domain>(`/projects/${projectId}/domains/`, {
+    method: "POST",
+    body: { hostname },
+    csrf: true,
+  });
+}
+
+export async function refreshProjectDomain(projectId: string, domainId: string): Promise<Domain> {
+  return apiRequest<Domain>(`/projects/${projectId}/domains/${domainId}/refresh/`, {
+    method: "POST",
+    body: {},
+    csrf: true,
+  });
+}
+
+export async function deleteProjectDomain(projectId: string, domainId: string): Promise<void> {
+  await apiRequest<void>(`/projects/${projectId}/domains/${domainId}/`, {
+    method: "DELETE",
+    csrf: true,
+  });
 }
 
 export async function fetchProjectSettings(id: string): Promise<ProjectSettings> {
