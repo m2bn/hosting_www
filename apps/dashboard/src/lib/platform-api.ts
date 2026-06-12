@@ -75,6 +75,66 @@ export type DashboardSummary = {
   permissions?: Permission[];
 };
 
+export type PlanLimits = {
+  projects: number;
+  storage_gb: number;
+  transfer_gb: number;
+  cpu_limit?: string;
+  memory_limit?: string;
+  custom_domains: boolean;
+  container_deployments: boolean;
+};
+
+export type BillingPlan = {
+  id: string;
+  name: string;
+  code: string;
+  price_label: string;
+  description?: string;
+  limits: PlanLimits;
+  current?: boolean;
+};
+
+export type Subscription = {
+  id: string;
+  status: string;
+  current_period_end?: string;
+  payment_failed?: boolean;
+  payment_failure_message?: string;
+};
+
+export type UsageMetric = {
+  key: "projects" | "storage_gb" | "transfer_gb" | "cpu_hours" | "memory_gb_hours";
+  label: string;
+  used: number;
+  limit: number;
+  unit: string;
+};
+
+export type Invoice = {
+  id: string;
+  number: string;
+  status: string;
+  amount_due: string;
+  issued_at: string;
+  hosted_invoice_url?: string;
+};
+
+export type BillingOverview = {
+  organization_id: string;
+  organization_name: string;
+  role: Role;
+  permissions?: Permission[];
+  current_plan: BillingPlan;
+  subscription: Subscription;
+  usage: UsageMetric[];
+  recent_invoices: Invoice[];
+};
+
+export type CheckoutSession = {
+  checkout_url: string;
+};
+
 export async function fetchDashboard(): Promise<DashboardSummary> {
   return apiRequest<DashboardSummary>("/dashboard/");
 }
@@ -109,4 +169,28 @@ export async function fetchProjectDomains(id: string): Promise<Domain[]> {
 
 export async function fetchProjectSettings(id: string): Promise<ProjectSettings> {
   return apiRequest<ProjectSettings>(`/projects/${id}/settings/`);
+}
+
+export async function fetchBillingOverview(): Promise<BillingOverview> {
+  return apiRequest<BillingOverview>("/billing/");
+}
+
+export async function fetchBillingPlans(): Promise<BillingPlan[]> {
+  return normalizeList(await apiRequest<ListResponse<BillingPlan>>("/billing/plans/"));
+}
+
+export async function fetchBillingInvoices(): Promise<Invoice[]> {
+  return normalizeList(await apiRequest<ListResponse<Invoice>>("/billing/invoices/"));
+}
+
+export async function fetchBillingUsage(): Promise<UsageMetric[]> {
+  return normalizeList(await apiRequest<ListResponse<UsageMetric>>("/billing/usage/"));
+}
+
+export async function startStripeCheckout(planCode?: string): Promise<CheckoutSession> {
+  return apiRequest<CheckoutSession>("/billing/checkout/", {
+    method: "POST",
+    body: planCode ? { plan_code: planCode } : {},
+    csrf: true,
+  });
 }
