@@ -1,0 +1,6 @@
+apiVersion: v2
+name: platform-services
+description: Helm chart for SaaS hosting platform control-plane services.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

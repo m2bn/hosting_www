@@ -1,0 +1,69 @@
+global:
+  namespace: platform-staging
+  imagePullPolicy: IfNotPresent
+
+externalSecrets:
+  enabled: true
+  secretStoreRef:
+    name: platform-staging-secrets
+    kind: ClusterSecretStore
+
+services:
+  api:
+    replicas: 1
+    config:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      SERVICE_NAME: api
+      ENVIRONMENT: staging
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+  dashboard:
+    replicas: 1
+    config:
+      NODE_ENV: production
+      SERVICE_NAME: dashboard
+      ENVIRONMENT: staging
+      NEXT_PUBLIC_API_BASE_URL: https://api.staging.example.com
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+  billing-service:
+    replicas: 1
+    config:
+      SERVICE_NAME: billing-service
+      ENVIRONMENT: staging
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+  provisioner-service:
+    replicas: 1
+    config:
+      SERVICE_NAME: provisioner-service
+      ENVIRONMENT: staging
+  deployment-worker:
+    replicas: 1
+    config:
+      SERVICE_NAME: deployment-worker
+      ENVIRONMENT: staging
+  notification-service:
+    replicas: 1
+    config:
+      SERVICE_NAME: notification-service
+      ENVIRONMENT: staging
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3
+  metering-service:
+    replicas: 1
+    config:
+      SERVICE_NAME: metering-service
+      ENVIRONMENT: staging
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 3

@@ -1,0 +1,276 @@
+global:
+  namespace: platform
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  commonLabels:
+    app.kubernetes.io/part-of: hosting-platform
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: false
+  annotations: {}
+
+externalSecrets:
+  enabled: false
+  refreshInterval: 1h
+  secretStoreRef:
+    name: platform-secrets
+    kind: ClusterSecretStore
+
+networkPolicy:
+  enabled: true
+  allowDnsEgress: true
+  egressCidrs: []
+
+services:
+  api:
+    enabled: true
+    kind: web
+    replicas: 2
+    image:
+      repository: registry.example.com/platform/api
+      tag: "0.1.0"
+    command: []
+    args: []
+    ports:
+      http: 8000
+    config:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      SERVICE_NAME: api
+    secretKeys:
+      - DATABASE_URL
+      - REDIS_URL
+      - RABBITMQ_URL
+      - SECRET_KEY
+      - STRIPE_SECRET_KEY
+    probes:
+      readinessPath: /healthz
+      livenessPath: /livez
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+    pdb:
+      enabled: true
+      minAvailable: 1
+    readOnlyRootFilesystem: true
+
+  dashboard:
+    enabled: true
+    kind: web
+    replicas: 2
+    image:
+      repository: registry.example.com/platform/dashboard
+      tag: "0.1.0"
+    ports:
+      http: 3000
+    config:
+      NODE_ENV: production
+      SERVICE_NAME: dashboard
+      NEXT_PUBLIC_API_BASE_URL: https://api.example.com
+    secretKeys: []
+    probes:
+      readinessPath: /
+      livenessPath: /
+    resources:
+      requests:
+        cpu: 150m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 6
+      targetCPUUtilizationPercentage: 70
+    pdb:
+      enabled: true
+      minAvailable: 1
+    readOnlyRootFilesystem: true
+
+  billing-service:
+    enabled: true
+    kind: worker
+    replicas: 2
+    image:
+      repository: registry.example.com/platform/billing-service
+      tag: "0.1.0"
+    ports:
+      http: 8080
+    config:
+      SERVICE_NAME: billing-service
+    secretKeys:
+      - DATABASE_URL
+      - RABBITMQ_URL
+      - STRIPE_SECRET_KEY
+      - STRIPE_WEBHOOK_SECRET
+    probes:
+      readinessPath: /healthz
+      livenessPath: /livez
+    resources:
+      requests:
+        cpu: 150m
+        memory: 256Mi
+      limits:
+        cpu: 750m
+        memory: 768Mi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 6
+      targetCPUUtilizationPercentage: 75
+    pdb:
+      enabled: true
+      minAvailable: 1
+    readOnlyRootFilesystem: true
+
+  provisioner-service:
+    enabled: true
+    kind: worker
+    replicas: 2
+    image:
+      repository: registry.example.com/platform/provisioner-service
+      tag: "0.1.0"
+    ports:
+      http: 8080
+    config:
+      SERVICE_NAME: provisioner-service
+    secretKeys:
+      - DATABASE_URL
+      - RABBITMQ_URL
+      - KUBERNETES_API_TOKEN
+      - S3_ENDPOINT_URL
+    probes:
+      readinessPath: /healthz
+      livenessPath: /livez
+    resources:
+      requests:
+        cpu: 200m
+        memory: 384Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    hpa:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 75
+    pdb:
+      enabled: true
+      minAvailable: 1
+    readOnlyRootFilesystem: true
+
+  deployment-worker:
+    enabled: true
+    kind: worker
+    replicas: 2
+    image:
+      repository: registry.example.com/platform/deployment-worker
+      tag: "0.1.0"
+    ports:
+      http: 8080
+    config:
+      SERVICE_NAME: deployment-worker
+    secretKeys:
+      - DATABASE_URL
+      - RABBITMQ_URL
+      - REGISTRY_PUSH_TOKEN
+      - S3_ENDPOINT_URL
+    probes:
+      readinessPath: /healthz
+      livenessPath: /livez
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+    hpa:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 80
+    pdb:
+      enabled: true
+      minAvailable: 1
+    readOnlyRootFilesystem: false
+
+  notification-service:
+    enabled: true
+    kind: worker
+    replicas: 2
+    image:
+      repository: registry.example.com/platform/notification-service
+      tag: "0.1.0"
+    ports:
+      http: 8080
+    config:
+      SERVICE_NAME: notification-service
+    secretKeys:
+      - DATABASE_URL
+      - RABBITMQ_URL
+      - SMTP_URL
+    probes:
+      readinessPath: /healthz
+      livenessPath: /livez
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 6
+      targetCPUUtilizationPercentage: 70
+    pdb:
+      enabled: true
+      minAvailable: 1
+    readOnlyRootFilesystem: true
+
+  metering-service:
+    enabled: true
+    kind: worker
+    replicas: 2
+    image:
+      repository: registry.example.com/platform/metering-service
+      tag: "0.1.0"
+    ports:
+      http: 8080
+    config:
+      SERVICE_NAME: metering-service
+    secretKeys:
+      - DATABASE_URL
+      - RABBITMQ_URL
+      - PROMETHEUS_READ_URL
+    probes:
+      readinessPath: /healthz
+      livenessPath: /livez
+    resources:
+      requests:
+        cpu: 150m
+        memory: 256Mi
+      limits:
+        cpu: 750m
+        memory: 768Mi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 6
+      targetCPUUtilizationPercentage: 70
+    pdb:
+      enabled: true
+      minAvailable: 1
+    readOnlyRootFilesystem: true

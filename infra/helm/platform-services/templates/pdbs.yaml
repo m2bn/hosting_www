@@ -1,0 +1,18 @@
+{{- range $name, $service := .Values.services }}
+{{- if and $service.enabled $service.pdb.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "platform-services.serviceName" (dict "root" $ "name" $name) }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    {{- include "platform-services.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  minAvailable: {{ $service.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "platform-services.selectorLabels" (dict "root" $ "name" $name) | nindent 6 }}
+{{- end }}
+{{- end }}

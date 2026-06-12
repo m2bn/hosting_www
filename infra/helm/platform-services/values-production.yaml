@@ -1,0 +1,69 @@
+global:
+  namespace: platform
+  imagePullPolicy: IfNotPresent
+
+externalSecrets:
+  enabled: true
+  secretStoreRef:
+    name: platform-production-secrets
+    kind: ClusterSecretStore
+
+services:
+  api:
+    replicas: 3
+    config:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      SERVICE_NAME: api
+      ENVIRONMENT: production
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 12
+  dashboard:
+    replicas: 3
+    config:
+      NODE_ENV: production
+      SERVICE_NAME: dashboard
+      ENVIRONMENT: production
+      NEXT_PUBLIC_API_BASE_URL: https://api.example.com
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+  billing-service:
+    replicas: 3
+    config:
+      SERVICE_NAME: billing-service
+      ENVIRONMENT: production
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+  provisioner-service:
+    replicas: 2
+    config:
+      SERVICE_NAME: provisioner-service
+      ENVIRONMENT: production
+  deployment-worker:
+    replicas: 3
+    config:
+      SERVICE_NAME: deployment-worker
+      ENVIRONMENT: production
+  notification-service:
+    replicas: 3
+    config:
+      SERVICE_NAME: notification-service
+      ENVIRONMENT: production
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+  metering-service:
+    replicas: 3
+    config:
+      SERVICE_NAME: metering-service
+      ENVIRONMENT: production
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10

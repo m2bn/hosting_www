@@ -1,0 +1,83 @@
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "platform-services.serviceName" (dict "root" $ "name" $name) }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    {{- include "platform-services.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ $service.replicas }}
+  selector:
+    matchLabels:
+      {{- include "platform-services.selectorLabels" (dict "root" $ "name" $name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "platform-services.selectorLabels" (dict "root" $ "name" $name) | nindent 8 }}
+        {{- include "platform-services.labels" $ | nindent 8 }}
+      annotations:
+        checksum/config: {{ toJson $service.config | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "platform-services.serviceAccountName" $ }}
+      automountServiceAccountToken: {{ $.Values.serviceAccount.automountServiceAccountToken }}
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: {{ $name }}
+          image: "{{ $service.image.repository }}:{{ $service.image.tag }}"
+          imagePullPolicy: {{ default $.Values.global.imagePullPolicy $service.image.pullPolicy }}
+          {{- with $service.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $service.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $service.ports.http }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "platform-services.serviceName" (dict "root" $ "name" $name) }}-config
+            - secretRef:
+                name: {{ include "platform-services.serviceName" (dict "root" $ "name" $name) }}-secret
+          readinessProbe:
+            httpGet:
+              path: {{ $service.probes.readinessPath }}
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ $service.probes.livenessPath }}
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml $service.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: {{ $service.readOnlyRootFilesystem }}
+            runAsNonRoot: true
+{{- end }}
+{{- end }}

@@ -1,0 +1,22 @@
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "platform-services.serviceName" (dict "root" $ "name" $name) }}
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    {{- include "platform-services.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "platform-services.selectorLabels" (dict "root" $ "name" $name) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $service.ports.http }}
+      targetPort: http
+      protocol: TCP
+{{- end }}
+{{- end }}

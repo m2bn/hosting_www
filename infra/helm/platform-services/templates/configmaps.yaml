@@ -1,0 +1,17 @@
+{{- range $name, $service := .Values.services }}
+{{- if $service.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "platform-services.serviceName" (dict "root" $ "name" $name) }}-config
+  namespace: {{ $.Values.global.namespace }}
+  labels:
+    {{- include "platform-services.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+data:
+  {{- range $key, $value := $service.config }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}
