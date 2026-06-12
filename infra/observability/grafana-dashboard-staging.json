@@ -1,0 +1,92 @@
+{
+  "title": "SaaS Hosting Platform Staging",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["platform", "staging"],
+  "templating": {
+    "list": [
+      {
+        "name": "namespace",
+        "type": "constant",
+        "query": "platform-staging",
+        "current": {
+          "text": "platform-staging",
+          "value": "platform-staging"
+        }
+      },
+      {
+        "name": "environment",
+        "type": "constant",
+        "query": "staging",
+        "current": {
+          "text": "staging",
+          "value": "staging"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Staging API Request Rate",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "sum(rate(platform_http_requests_total{namespace=\"$namespace\",environment=\"$environment\"}[5m])) by (service)", "legendFormat": "{{service}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Staging API Error Rate",
+      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "sum(rate(platform_http_errors_total{namespace=\"$namespace\",environment=\"$environment\"}[5m])) by (service)", "legendFormat": "{{service}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Staging API p95 Latency",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(platform_http_request_duration_seconds_bucket{namespace=\"$namespace\",environment=\"$environment\"}[5m])) by (le, service))", "legendFormat": "{{service}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Staging Queue Depth",
+      "gridPos": {"x": 0, "y": 6, "w": 8, "h": 6},
+      "targets": [{"expr": "platform_queue_depth{namespace=\"$namespace\",environment=\"$environment\"}", "legendFormat": "{{queue}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Staging Stripe Webhook Failures",
+      "gridPos": {"x": 8, "y": 6, "w": 8, "h": 6},
+      "targets": [{"expr": "increase(platform_stripe_webhook_failures_total{namespace=\"$namespace\",environment=\"$environment\"}[1h])", "legendFormat": "{{event_type}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Staging Deployment Failures",
+      "gridPos": {"x": 16, "y": 6, "w": 8, "h": 6},
+      "targets": [{"expr": "increase(platform_deployment_failures_total{namespace=\"$namespace\",environment=\"$environment\"}[1h])", "legendFormat": "{{deployment_type}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Staging Certificate Errors",
+      "gridPos": {"x": 0, "y": 12, "w": 8, "h": 6},
+      "targets": [{"expr": "increase(platform_certificate_errors_total{namespace=\"$namespace\",environment=\"$environment\"}[1h])", "legendFormat": "{{reason}}"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Staging Storage Usage",
+      "gridPos": {"x": 8, "y": 12, "w": 8, "h": 6},
+      "targets": [{"expr": "platform_usage_storage_gb{namespace=\"$namespace\",environment=\"$environment\"}", "legendFormat": "{{project}}"}]
+    },
+    {
+      "type": "stat",
+      "title": "Staging Active Projects",
+      "gridPos": {"x": 16, "y": 12, "w": 4, "h": 6},
+      "targets": [{"expr": "platform_active_projects{namespace=\"$namespace\",environment=\"$environment\"}", "legendFormat": "projects"}]
+    },
+    {
+      "type": "stat",
+      "title": "Staging Active Subscriptions",
+      "gridPos": {"x": 20, "y": 12, "w": 4, "h": 6},
+      "targets": [{"expr": "platform_active_subscriptions{namespace=\"$namespace\",environment=\"$environment\"}", "legendFormat": "subscriptions"}]
+    }
+  ]
+}

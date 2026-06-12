@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-staging
+  labels:
+    environment: staging
+    app.kubernetes.io/part-of: hosting-platform
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    platform.example.com/data-classification: non-production
+    platform.example.com/production-data-allowed: "false"

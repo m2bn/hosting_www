@@ -1,0 +1,19 @@
+{
+  "environment": "staging",
+  "mode": "test",
+  "endpoint_url": "https://api.staging.example.com/api/billing/stripe/webhook/",
+  "events": [
+    "checkout.session.completed",
+    "customer.subscription.created",
+    "customer.subscription.updated",
+    "customer.subscription.deleted",
+    "invoice.paid",
+    "invoice.payment_failed"
+  ],
+  "secret_storage_key": "platform/platform-staging/billing-service/STRIPE_WEBHOOK_SECRET",
+  "notes": [
+    "Create this endpoint in Stripe test mode only.",
+    "Do not reuse production webhook signing secrets.",
+    "Use Stripe CLI test events during deployment validation."
+  ]
+}
