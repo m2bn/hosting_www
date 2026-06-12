@@ -44,9 +44,33 @@ export type Project = {
 export type Deployment = {
   id: string;
   version: string;
-  status: string;
+  status: DeploymentStatus;
   created_at: string;
   actor?: string;
+  type?: "static" | "container";
+  commit_sha?: string;
+  image_tag?: string;
+  artifact_name?: string;
+  can_rollback?: boolean;
+};
+
+export type DeploymentStatus = "queued" | "building" | "scanning" | "deploying" | "active" | "failed" | "rolled_back";
+
+export type DeploymentLogLine = {
+  id: string;
+  timestamp: string;
+  stream: "build" | "deploy" | "scan";
+  message: string;
+};
+
+export type StaticDeploymentInput = {
+  file: File;
+};
+
+export type ContainerDeploymentInput = {
+  repository_url: string;
+  branch: string;
+  dockerfile_path: string;
 };
 
 export type Domain = {
@@ -161,6 +185,40 @@ export async function fetchProject(id: string): Promise<Project> {
 
 export async function fetchProjectDeployments(id: string): Promise<Deployment[]> {
   return normalizeList(await apiRequest<ListResponse<Deployment>>(`/projects/${id}/deployments/`));
+}
+
+export async function fetchProjectDeployment(projectId: string, deploymentId: string): Promise<Deployment> {
+  return apiRequest<Deployment>(`/projects/${projectId}/deployments/${deploymentId}/`);
+}
+
+export async function fetchProjectDeploymentLogs(projectId: string, deploymentId: string): Promise<DeploymentLogLine[]> {
+  return normalizeList(await apiRequest<ListResponse<DeploymentLogLine>>(`/projects/${projectId}/deployments/${deploymentId}/logs/`));
+}
+
+export async function createStaticDeployment(projectId: string, input: StaticDeploymentInput): Promise<Deployment> {
+  const formData = new FormData();
+  formData.set("file", input.file);
+  return apiRequest<Deployment>(`/projects/${projectId}/deployments/static/`, {
+    method: "POST",
+    body: formData,
+    csrf: true,
+  });
+}
+
+export async function createContainerDeployment(projectId: string, input: ContainerDeploymentInput): Promise<Deployment> {
+  return apiRequest<Deployment>(`/projects/${projectId}/deployments/container/`, {
+    method: "POST",
+    body: input,
+    csrf: true,
+  });
+}
+
+export async function rollbackDeployment(projectId: string, deploymentId: string): Promise<Deployment> {
+  return apiRequest<Deployment>(`/projects/${projectId}/deployments/${deploymentId}/rollback/`, {
+    method: "POST",
+    body: {},
+    csrf: true,
+  });
 }
 
 export async function fetchProjectDomains(id: string): Promise<Domain[]> {
