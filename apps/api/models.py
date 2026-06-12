@@ -60,6 +60,8 @@ class User(AbstractUser, TimeStampedModel):
     is_platform_staff = models.BooleanField(default=False)
     mfa_enabled = models.BooleanField(default=False)
     last_login_at = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    anonymized_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -846,6 +848,76 @@ class NotificationMessage(TimeStampedModel):
         indexes = [
             models.Index(fields=["status", "created_at"], name="api_notif_status_created_idx"),
             models.Index(fields=["recipient_email_hash", "created_at"], name="api_notif_rec_created_idx"),
+        ]
+
+
+class DataExportScope(models.TextChoices):
+    USER = "user", "User"
+    ORGANIZATION = "organization", "Organization"
+
+
+class DataExportStatus(models.TextChoices):
+    QUEUED = "queued", "Queued"
+    PROCESSING = "processing", "Processing"
+    COMPLETED = "completed", "Completed"
+    FAILED = "failed", "Failed"
+    EXPIRED = "expired", "Expired"
+
+
+class DataExportRequest(TimeStampedModel):
+    requested_by_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="data_export_requests")
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name="data_export_requests")
+    scope = models.CharField(max_length=32, choices=DataExportScope.choices)
+    status = models.CharField(max_length=32, choices=DataExportStatus.choices, default=DataExportStatus.QUEUED)
+    file_path = models.CharField(max_length=1024, blank=True)
+    file_sha256 = models.CharField(max_length=64, blank=True)
+    download_token_hash = models.CharField(max_length=255, blank=True)
+    download_expires_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    failed_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["requested_by_user", "-created_at"], name="api_export_user_created_idx"),
+            models.Index(fields=["organization", "-created_at"], name="api_export_org_created_idx"),
+            models.Index(fields=["status", "download_expires_at"], name="api_export_status_exp_idx"),
+        ]
+
+    def set_download_token(self, raw_token):
+        self.download_token_hash = make_password(raw_token)
+
+    def check_download_token(self, raw_token):
+        return check_password(raw_token, self.download_token_hash)
+
+
+class DataDeletionScope(models.TextChoices):
+    USER = "user", "User"
+    ORGANIZATION = "organization", "Organization"
+
+
+class DataDeletionStatus(models.TextChoices):
+    REQUESTED = "requested", "Requested"
+    SOFT_DELETED = "soft_deleted", "Soft deleted"
+    HARD_DELETED = "hard_deleted", "Hard deleted"
+    CANCELLED = "cancelled", "Cancelled"
+    FAILED = "failed", "Failed"
+
+
+class DataDeletionRequest(TimeStampedModel):
+    requested_by_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="data_deletion_requests")
+    target_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="targeted_deletion_requests")
+    organization = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name="data_deletion_requests")
+    scope = models.CharField(max_length=32, choices=DataDeletionScope.choices)
+    status = models.CharField(max_length=32, choices=DataDeletionStatus.choices, default=DataDeletionStatus.REQUESTED)
+    retention_until = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["scope", "status", "retention_until"], name="api_delete_scope_status_idx"),
+            models.Index(fields=["organization", "status"], name="api_delete_org_status_idx"),
+            models.Index(fields=["target_user", "status"], name="api_delete_user_status_idx"),
         ]
 
 

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.api import api_key_views, auth_views, billing_views, certificate_views, container_deployment_views, domain_views, metering_views, organization_views, project_views, secret_views, static_deployment_views
+from apps.api import api_key_views, auth_views, billing_views, certificate_views, container_deployment_views, data_protection_views, domain_views, metering_views, organization_views, project_views, secret_views, static_deployment_views
 
 
 urlpatterns = [
@@ -16,6 +16,9 @@ urlpatterns = [
     path("auth/2fa/setup/", auth_views.TwoFactorSetupView.as_view(), name="auth-2fa-setup"),
     path("auth/2fa/enable/", auth_views.TwoFactorEnableView.as_view(), name="auth-2fa-enable"),
     path("auth/2fa/disable/", auth_views.TwoFactorDisableView.as_view(), name="auth-2fa-disable"),
+    path("data-exports/user/", data_protection_views.UserDataExportRequestView.as_view(), name="data-export-user"),
+    path("data-exports/<uuid:export_public_id>/download/", data_protection_views.DataExportDownloadView.as_view(), name="data-export-download"),
+    path("privacy/account/delete/", data_protection_views.UserDeletionRequestView.as_view(), name="data-delete-user"),
     path("billing/stripe/webhook/", billing_views.StripeWebhookView.as_view(), name="stripe-webhook"),
     path("organizations/", organization_views.OrganizationListCreateView.as_view(), name="organization-list"),
     path(
@@ -27,6 +30,16 @@ urlpatterns = [
         "organizations/<uuid:organization_public_id>/members/",
         organization_views.OrganizationMemberListCreateView.as_view(),
         name="organization-member-list",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/data-exports/",
+        data_protection_views.OrganizationDataExportRequestView.as_view(),
+        name="data-export-organization",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/delete/",
+        data_protection_views.OrganizationDeletionRequestView.as_view(),
+        name="data-delete-organization",
     ),
     path(
         "organizations/<uuid:organization_public_id>/members/<uuid:member_public_id>/",

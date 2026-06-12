@@ -84,6 +84,11 @@ class AuditAction:
     SECRET_DELETED = "secret.deleted"
     OPERATOR_ACTION = "operator.action"
 
+    DATA_EXPORT_REQUESTED = "data_export.requested"
+    DATA_EXPORT_COMPLETED = "data_export.completed"
+    DATA_DELETION_REQUESTED = "data_deletion.requested"
+    DATA_DELETION_COMPLETED = "data_deletion.completed"
+
 
 def get_ip_address(request):
     if request is None:

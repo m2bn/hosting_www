@@ -139,6 +139,9 @@ BACKUP_SECRET_FINGERPRINT_KEYS = [
     ).split(",")
     if key.strip()
 ]
+DATA_EXPORT_STORAGE_ROOT = os.environ.get("DATA_EXPORT_STORAGE_ROOT", str(BASE_DIR / "outputs" / "data-exports"))
+DATA_EXPORT_URL_TTL_SECONDS = int(os.environ.get("DATA_EXPORT_URL_TTL_SECONDS", "3600"))
+DATA_DELETION_RETENTION_DAYS = int(os.environ.get("DATA_DELETION_RETENTION_DAYS", "30"))
 
 LOGGING = {
     "version": 1,
