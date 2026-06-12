@@ -164,6 +164,54 @@ export type CheckoutSession = {
   checkout_url: string;
 };
 
+export type OperatorAccess = {
+  is_operator: boolean;
+  two_factor_verified: boolean;
+  user_role?: string;
+};
+
+export type OperatorOrganization = {
+  id: string;
+  name: string;
+  status: string;
+  plan?: string;
+  billing_status?: string;
+  projects_count?: number;
+};
+
+export type OperatorProject = {
+  id: string;
+  name: string;
+  organization_name: string;
+  status: string;
+  deployment_status?: DeploymentStatus;
+  billing_status?: string;
+  domain_status?: DomainStatus;
+  certificate_status?: string;
+};
+
+export type OperatorAuditLog = {
+  id: string;
+  actor: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  created_at: string;
+  reason?: string;
+};
+
+export type OperatorDashboard = {
+  access: OperatorAccess;
+  organizations: OperatorOrganization[];
+  projects: OperatorProject[];
+  audit_logs: OperatorAuditLog[];
+};
+
+export type OperatorActionResult<T> = {
+  resource: T;
+  audit_log: OperatorAuditLog;
+};
+
 export async function fetchDashboard(): Promise<DashboardSummary> {
   return apiRequest<DashboardSummary>("/dashboard/");
 }
@@ -277,6 +325,36 @@ export async function startStripeCheckout(planCode?: string): Promise<CheckoutSe
   return apiRequest<CheckoutSession>("/billing/checkout/", {
     method: "POST",
     body: planCode ? { plan_code: planCode } : {},
+    csrf: true,
+  });
+}
+
+export async function fetchOperatorDashboard(query?: string): Promise<OperatorDashboard> {
+  const search = query?.trim();
+  const suffix = search ? `?q=${encodeURIComponent(search)}` : "";
+  return apiRequest<OperatorDashboard>(`/operator/dashboard/${suffix}`);
+}
+
+export async function blockOperatorOrganization(id: string, reason: string): Promise<OperatorActionResult<OperatorOrganization>> {
+  return apiRequest<OperatorActionResult<OperatorOrganization>>(`/operator/organizations/${id}/block/`, {
+    method: "POST",
+    body: { reason },
+    csrf: true,
+  });
+}
+
+export async function unblockOperatorOrganization(id: string, reason: string): Promise<OperatorActionResult<OperatorOrganization>> {
+  return apiRequest<OperatorActionResult<OperatorOrganization>>(`/operator/organizations/${id}/unblock/`, {
+    method: "POST",
+    body: { reason },
+    csrf: true,
+  });
+}
+
+export async function blockOperatorProject(id: string, reason: string): Promise<OperatorActionResult<OperatorProject>> {
+  return apiRequest<OperatorActionResult<OperatorProject>>(`/operator/projects/${id}/block/`, {
+    method: "POST",
+    body: { reason },
     csrf: true,
   });
 }
