@@ -6,7 +6,6 @@ from django.views import View
 from apps.api import audit_log
 from apps.api.auth_utils import json_error, json_ok, parse_json_body
 from apps.api.models import (
-    AuditResult,
     Organization,
     OrganizationMember,
     OrganizationMemberStatus,
@@ -15,7 +14,7 @@ from apps.api.models import (
     RoleScope,
     User,
 )
-from apps.api.rbac import ROLE_ADMIN, ROLE_OWNER, BASE_ROLE_KEYS, PermissionKey, user_has_permission, user_has_role
+from apps.api.rbac import ROLE_OWNER, BASE_ROLE_KEYS, PermissionKey, user_has_permission, user_has_role
 
 
 def role_for_key(role_key):

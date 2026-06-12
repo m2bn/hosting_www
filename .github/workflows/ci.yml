@@ -19,6 +19,10 @@ env:
   PYTHON_VERSION: "3.12"
   DJANGO_SETTINGS_MODULE: config.settings.test
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   lint-backend:
     name: Lint backend
@@ -55,7 +59,15 @@ jobs:
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python - <<'PY'
+          import subprocess
+          import sys
+          import tomllib
+
+          with open("pyproject.toml", "rb") as handle:
+              dependencies = tomllib.load(handle)["project"]["dependencies"]
+          subprocess.check_call([sys.executable, "-m", "pip", "install", *dependencies])
+          PY
 
       - name: Check Django project
         run: python manage.py check
@@ -86,7 +98,15 @@ jobs:
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python - <<'PY'
+          import subprocess
+          import sys
+          import tomllib
+
+          with open("pyproject.toml", "rb") as handle:
+              dependencies = tomllib.load(handle)["project"]["dependencies"]
+          subprocess.check_call([sys.executable, "-m", "pip", "install", *dependencies])
+          PY
 
       - name: Run Django deploy checks
         run: python manage.py check --deploy
@@ -107,7 +127,15 @@ jobs:
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python - <<'PY'
+          import subprocess
+          import sys
+          import tomllib
+
+          with open("pyproject.toml", "rb") as handle:
+              dependencies = tomllib.load(handle)["project"]["dependencies"]
+          subprocess.check_call([sys.executable, "-m", "pip", "install", *dependencies])
+          PY
 
       - name: Run security test suite
         run: python manage.py test tests.security apps.api.tests_secure_configuration apps.api.tests_authentication apps.api.tests_api_keys
@@ -128,11 +156,20 @@ jobs:
       - name: Install audit tool
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
           python -m pip install pip-audit
+          mkdir -p build
+          python - <<'PY'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as handle:
+              dependencies = tomllib.load(handle)["project"]["dependencies"]
+          with open("build/requirements-ci.txt", "w", encoding="utf-8") as handle:
+              handle.write("\n".join(dependencies))
+              handle.write("\n")
+          PY
 
       - name: Audit Python dependencies
-        run: pip-audit --strict
+        run: pip-audit --strict --requirement build/requirements-ci.txt
 
   secret-scanning:
     name: Secret scanning
@@ -209,11 +246,11 @@ jobs:
 
       - name: Install Trivy
         if: steps.dockerfiles.outputs.found == 'true'
-        uses: aquasecurity/setup-trivy@v0.2.2
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
-      - name: Build and scan Docker images
+      - name: Scan Dockerfiles and built images with Trivy
         if: steps.dockerfiles.outputs.found == 'true'
-        shell: bash
         run: |
           while IFS= read -r dockerfile; do
             context="$(dirname "$dockerfile")"

@@ -7,5 +7,5 @@ ALLOWED_HOSTS = ["testserver", "localhost", "127.0.0.1"]
 AUTH_RETURN_DEBUG_TOKENS = True
 
 PASSWORD_HASHERS = [
-    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.MD5PasswordHasher",
 ]

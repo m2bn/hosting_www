@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 
-from django.conf import settings
 from django.db.models import Sum
 from django.utils import timezone
 
 from apps.api import audit_log
-from apps.api.entitlements import get_runtime_limits, get_storage_limit, get_transfer_limit
+from apps.api.entitlements import get_storage_limit, get_transfer_limit
 from apps.api.models import SecurityEvent, SecuritySeverity, UsageMetric, UsageRecord
 
 

@@ -10,7 +10,6 @@ from decimal import Decimal
 from pathlib import Path, PurePosixPath
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone

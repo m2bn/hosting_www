@@ -7,7 +7,7 @@ import struct
 import time
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.http import JsonResponse
