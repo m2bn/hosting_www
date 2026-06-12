@@ -14,6 +14,7 @@ from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 from django.core.management import call_command
+from django.db import connections
 from django.utils import timezone
 
 
@@ -124,15 +125,39 @@ def _backup_postgresql(payload_dir, manifest):
     target.mkdir()
     dump_path = target / "dump.sql"
     pg_dump = shutil.which("pg_dump")
-    if pg_dump and os.environ.get("DATABASE_URL"):
+    database = connections["default"].settings_dict
+    if pg_dump and database.get("ENGINE") == "django.db.backends.postgresql":
         with dump_path.open("wb") as handle:
-            subprocess.run([pg_dump, os.environ["DATABASE_URL"], "--no-owner", "--no-privileges"], check=True, stdout=handle)
+            subprocess.run(_pg_dump_command(pg_dump, database), check=True, stdout=handle, env=_pg_dump_environment(database))
         mode = "pg_dump"
     else:
         with dump_path.open("w", encoding="utf-8") as handle:
             call_command("dumpdata", "--natural-foreign", "--natural-primary", stdout=handle)
         mode = "django_dumpdata"
     manifest["components"]["postgresql"] = {"path": "postgresql/dump.sql", "mode": mode, "sha256": _sha256_file(dump_path)}
+
+
+def _pg_dump_command(pg_dump, database):
+    command = [pg_dump, "--no-owner", "--no-privileges"]
+    name = database.get("NAME")
+    if name:
+        command.extend(["--dbname", str(name)])
+    return command
+
+
+def _pg_dump_environment(database):
+    environment = os.environ.copy()
+    mapping = {
+        "HOST": "PGHOST",
+        "PORT": "PGPORT",
+        "USER": "PGUSER",
+        "PASSWORD": "PGPASSWORD",
+    }
+    for setting_key, env_key in mapping.items():
+        value = database.get(setting_key)
+        if value:
+            environment[env_key] = str(value)
+    return environment
 
 
 def _backup_s3_metadata(payload_dir, manifest):
