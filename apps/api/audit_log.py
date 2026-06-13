@@ -83,6 +83,12 @@ class AuditAction:
     SECRET_ROTATED = "secret.rotated"
     SECRET_DELETED = "secret.deleted"
     OPERATOR_ACTION = "operator.action"
+    ABUSE_PROJECT_FLAGGED = "abuse.project.flagged"
+    ABUSE_PROJECT_BLOCKED = "abuse.project.blocked"
+    ABUSE_PROJECT_UNBLOCKED = "abuse.project.unblocked"
+    ABUSE_ORGANIZATION_BLOCKED = "abuse.organization.blocked"
+    ABUSE_ORGANIZATION_UNBLOCKED = "abuse.organization.unblocked"
+    ABUSE_ALERT_CREATED = "abuse.alert.created"
 
     DATA_EXPORT_REQUESTED = "data_export.requested"
     DATA_EXPORT_COMPLETED = "data_export.completed"

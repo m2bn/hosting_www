@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.views import View
 
+from apps.api import abuse
 from apps.api.auth_utils import json_error, json_ok
 from apps.api.models import Deployment, Environment, EnvironmentStatus
 from apps.api.organization_views import get_user_organization_or_404, require_authenticated, require_permission
@@ -41,6 +42,10 @@ class StaticDeploymentCreateView(View):
         if error := require_permission(request, organization, PermissionKey.DEPLOYMENT_WRITE):
             return error
         project = get_project_for_organization_or_404(organization, project_public_id)
+        try:
+            abuse.ensure_project_can_deploy(project)
+        except abuse.AbuseError as exc:
+            return json_error(str(exc), status=403, code=exc.code)
         environment = get_environment_for_project_or_404(organization, project, environment_public_id)
         uploaded_file = request.FILES.get("file")
         if not uploaded_file:

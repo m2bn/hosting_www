@@ -85,6 +85,12 @@ class OrganizationStatus(models.TextChoices):
     DELETED = "deleted", "Deleted"
 
 
+class AbuseStatus(models.TextChoices):
+    CLEAR = "clear", "Clear"
+    FLAGGED = "flagged", "Flagged"
+    BLOCKED = "blocked", "Blocked"
+
+
 class Organization(TimeStampedModel, SoftDeleteModel):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=120)
@@ -92,6 +98,11 @@ class Organization(TimeStampedModel, SoftDeleteModel):
     billing_email = models.EmailField(blank=True)
     stripe_customer_id = models.CharField(max_length=255, blank=True)
     owner_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="owned_organizations")
+    abuse_status = models.CharField(max_length=32, choices=AbuseStatus.choices, default=AbuseStatus.CLEAR)
+    abuse_reason = models.TextField(blank=True)
+    abuse_marked_at = models.DateTimeField(null=True, blank=True)
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    blocked_by_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="blocked_organizations")
 
     class Meta:
         constraints = [
@@ -104,6 +115,7 @@ class Organization(TimeStampedModel, SoftDeleteModel):
         indexes = [
             models.Index(fields=["slug"], name="api_org_slug_idx"),
             models.Index(fields=["status"], name="api_org_status_idx"),
+            models.Index(fields=["abuse_status"], name="api_org_abuse_status_idx"),
         ]
 
     def __str__(self):
@@ -209,6 +221,11 @@ class Project(TimeStampedModel, SoftDeleteModel):
         related_name="default_for_projects",
     )
     created_by_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_projects")
+    abuse_status = models.CharField(max_length=32, choices=AbuseStatus.choices, default=AbuseStatus.CLEAR)
+    abuse_reason = models.TextField(blank=True)
+    abuse_marked_at = models.DateTimeField(null=True, blank=True)
+    blocked_at = models.DateTimeField(null=True, blank=True)
+    blocked_by_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="blocked_projects")
 
     class Meta:
         constraints = [
@@ -220,6 +237,7 @@ class Project(TimeStampedModel, SoftDeleteModel):
         ]
         indexes = [
             models.Index(fields=["organization", "status"], name="api_project_org_status_idx"),
+            models.Index(fields=["organization", "abuse_status"], name="api_project_org_abuse_idx"),
         ]
 
     def __str__(self):

@@ -1,5 +1,6 @@
 from django.views import View
 
+from apps.api import abuse
 from apps.api.auth_utils import json_error, json_ok
 from apps.api.container_deployments import ContainerDeploymentError, deploy_container_from_zip, deployment_logs, rollback_container_deployment
 from apps.api.static_deployment_views import get_environment_for_project_or_404, serialize_deployment
@@ -16,6 +17,10 @@ class ContainerDeploymentCreateView(View):
         if error := require_permission(request, organization, PermissionKey.DEPLOYMENT_WRITE):
             return error
         project = get_project_for_organization_or_404(organization, project_public_id)
+        try:
+            abuse.ensure_project_can_deploy(project)
+        except abuse.AbuseError as exc:
+            return json_error(str(exc), status=403, code=exc.code)
         environment = get_environment_for_project_or_404(organization, project, environment_public_id)
         uploaded_file = request.FILES.get("file")
         if not uploaded_file:
