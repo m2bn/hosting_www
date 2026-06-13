@@ -10,7 +10,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from apps.api import audit_log
+from apps.api import artifact_scanning, audit_log
 from apps.api.entitlements import can_deploy_project
 from apps.api.models import BuildJob, BuildJobStatus, Deployment, DeploymentStatus, RuntimeInstance, RuntimeInstanceStatus, SourceType
 
@@ -165,8 +165,21 @@ def deploy_container_from_zip(
             build_spec = _build_spec(organization, project, environment, build_job, context)
             build_result = registry_client.build_and_push(context_root=context.root, image_ref=image_ref, build_spec=build_spec)
             scan_result = scanner.scan(image_ref=build_result.image_ref, image_digest=build_result.image_digest)
-            if scan_result.critical_count > 0:
-                raise ContainerDeploymentError("Image scan found critical vulnerabilities.", code="critical_vulnerability")
+            scan = artifact_scanning.record_container_scan(
+                organization=organization,
+                project=project,
+                environment=environment,
+                build_job=build_job,
+                deployment=deployment,
+                image_ref=build_result.image_ref,
+                scan_result=scan_result,
+                request=request,
+                actor=actor,
+            )
+            try:
+                artifact_scanning.enforce_scan_policy(scan)
+            except artifact_scanning.ScanPolicyViolation as exc:
+                raise ContainerDeploymentError(str(exc), code=exc.code) from exc
             deploy_spec = _runtime_deployment_spec(environment, deployment, build_result)
             runtime_result = runtime_client.deploy(deploy_spec)
 

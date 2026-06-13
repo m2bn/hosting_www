@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.api import api_key_views, auth_views, billing_views, certificate_views, container_deployment_views, data_protection_views, domain_views, metering_views, operator_views, organization_views, project_views, secret_views, static_deployment_views
+from apps.api import api_key_views, artifact_scan_views, auth_views, billing_views, certificate_views, container_deployment_views, data_protection_views, domain_views, metering_views, operator_views, organization_views, project_views, secret_views, static_deployment_views
 
 
 urlpatterns = [
@@ -24,6 +24,7 @@ urlpatterns = [
     path("operator/projects/<uuid:project_public_id>/abusive/", operator_views.OperatorProjectMarkAbusiveView.as_view(), name="operator-project-abusive"),
     path("operator/projects/<uuid:project_public_id>/block/", operator_views.OperatorProjectBlockView.as_view(), name="operator-project-block"),
     path("operator/projects/<uuid:project_public_id>/unblock/", operator_views.OperatorProjectUnblockView.as_view(), name="operator-project-unblock"),
+    path("operator/artifact-scans/<uuid:scan_public_id>/override/", artifact_scan_views.OperatorArtifactScanOverrideView.as_view(), name="operator-artifact-scan-override"),
     path("operator/organizations/<uuid:organization_public_id>/block/", operator_views.OperatorOrganizationBlockView.as_view(), name="operator-organization-block"),
     path("operator/organizations/<uuid:organization_public_id>/unblock/", operator_views.OperatorOrganizationUnblockView.as_view(), name="operator-organization-unblock"),
     path("organizations/", organization_views.OrganizationListCreateView.as_view(), name="organization-list"),
@@ -96,6 +97,11 @@ urlpatterns = [
         "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/api-keys/",
         api_key_views.ProjectApiKeyListCreateView.as_view(),
         name="project-api-key-list",
+    ),
+    path(
+        "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/artifact-scans/",
+        artifact_scan_views.ProjectArtifactScanListView.as_view(),
+        name="project-artifact-scan-list",
     ),
     path(
         "organizations/<uuid:organization_public_id>/projects/<uuid:project_public_id>/environments/<uuid:environment_public_id>/secrets/",

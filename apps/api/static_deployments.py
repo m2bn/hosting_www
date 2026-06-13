@@ -14,7 +14,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
-from apps.api import audit_log
+from apps.api import artifact_scanning, audit_log
 from apps.api.entitlements import can_deploy_static_site, get_storage_limit
 from apps.api.models import BuildJob, BuildJobStatus, Deployment, DeploymentStatus, SourceType, UsageMetric, UsageRecord
 
@@ -49,7 +49,6 @@ def deploy_static_zip(*, organization, project, environment, uploaded_file, acto
                     destination.write(chunk)
             artifact = unpack_static_zip(archive_path, temp_path / "site")
             _check_storage_limit(organization, artifact.total_size)
-            prefix = _deployment_prefix(organization, project, None)
             with transaction.atomic():
                 build_job = BuildJob.objects.create(
                     organization=organization,
@@ -72,6 +71,20 @@ def deploy_static_zip(*, organization, project, environment, uploaded_file, acto
                     requested_by_user=actor,
                     started_at=timezone.now(),
                 )
+
+            scan = artifact_scanning.scan_static_artifact(
+                organization=organization,
+                project=project,
+                environment=environment,
+                build_job=build_job,
+                deployment=deployment,
+                artifact=artifact,
+                request=request,
+                actor=actor,
+            )
+            artifact_scanning.enforce_scan_policy(scan)
+
+            with transaction.atomic():
                 prefix = _deployment_prefix(organization, project, deployment)
                 storage = StaticDeploymentStorage()
                 upload_result = storage.upload_directory(artifact.root, prefix, artifact.manifest)
@@ -120,6 +133,26 @@ def deploy_static_zip(*, organization, project, environment, uploaded_file, acto
                     target_id=deployment.public_id,
                     metadata={"artifact_ref": deployment.image_ref},
                 )
+    except artifact_scanning.ScanPolicyViolation as exc:
+        if build_job:
+            build_job.status = BuildJobStatus.FAILED
+            build_job.finished_at = timezone.now()
+            build_job.save(update_fields=["status", "finished_at", "updated_at"])
+        if deployment:
+            deployment.status = DeploymentStatus.FAILED
+            deployment.finished_at = timezone.now()
+            deployment.save(update_fields=["status", "finished_at", "updated_at"])
+        audit_log.record(
+            action=audit_log.AuditAction.DEPLOYMENT_FAILED,
+            request=request,
+            actor=actor,
+            organization=organization,
+            project=project,
+            target_type="deployment",
+            target_id=deployment.public_id if deployment else "",
+            metadata={"code": exc.code, "scan_id": str(exc.scan.public_id) if exc.scan else ""},
+        )
+        raise StaticDeploymentError(str(exc), code=exc.code) from exc
     except StaticDeploymentError:
         if build_job:
             build_job.status = BuildJobStatus.FAILED

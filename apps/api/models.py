@@ -343,6 +343,20 @@ class SourceType(models.TextChoices):
     REGISTRY = "registry", "Registry"
 
 
+class ArtifactScanType(models.TextChoices):
+    STATIC_ZIP = "static_zip", "Static ZIP"
+    CONTAINER_IMAGE = "container_image", "Container image"
+    DEPENDENCY = "dependency", "Dependency"
+
+
+class ArtifactScanStatus(models.TextChoices):
+    CLEAN = "clean", "Clean"
+    FINDINGS = "findings", "Findings"
+    BLOCKED = "blocked", "Blocked"
+    OVERRIDDEN = "overridden", "Overridden"
+    FAILED = "failed", "Failed"
+
+
 class BuildJob(TimeStampedModel):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="build_jobs")
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="build_jobs")
@@ -412,6 +426,70 @@ class Deployment(TimeStampedModel):
         validate_environment_scope(self.organization_id, self.project_id, self.environment)
         if self.build_job:
             validate_project_scope(self.organization_id, self.build_job.project)
+
+
+class ArtifactScan(TimeStampedModel):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="artifact_scans")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="artifact_scans")
+    environment = models.ForeignKey(
+        Environment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="artifact_scans",
+    )
+    build_job = models.ForeignKey(
+        BuildJob,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="artifact_scans",
+    )
+    deployment = models.ForeignKey(
+        Deployment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="artifact_scans",
+    )
+    scan_type = models.CharField(max_length=32, choices=ArtifactScanType.choices)
+    artifact_ref = models.CharField(max_length=512)
+    status = models.CharField(max_length=32, choices=ArtifactScanStatus.choices, default=ArtifactScanStatus.CLEAN)
+    scanner = models.CharField(max_length=100, default="platform-policy")
+    report_ref = models.CharField(max_length=512, blank=True)
+    sbom_ref = models.CharField(max_length=512, blank=True)
+    summary = models.JSONField(default=dict, blank=True)
+    findings = models.JSONField(default=list, blank=True)
+    critical_count = models.PositiveIntegerField(default=0)
+    high_count = models.PositiveIntegerField(default=0)
+    medium_count = models.PositiveIntegerField(default=0)
+    low_count = models.PositiveIntegerField(default=0)
+    blocked_reason = models.TextField(blank=True)
+    overridden_by_user = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="artifact_scan_overrides",
+    )
+    override_reason = models.TextField(blank=True)
+    overridden_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["organization", "project", "-created_at"], name="api_scan_org_proj_created_idx"),
+            models.Index(fields=["organization", "status"], name="api_scan_org_status_idx"),
+            models.Index(fields=["build_job"], name="api_scan_build_idx"),
+            models.Index(fields=["deployment"], name="api_scan_deployment_idx"),
+        ]
+
+    def clean(self):
+        validate_project_scope(self.organization_id, self.project)
+        validate_environment_scope(self.organization_id, self.project_id, self.environment)
+        if self.build_job:
+            validate_project_scope(self.organization_id, self.build_job.project)
+        if self.deployment:
+            validate_project_scope(self.organization_id, self.deployment.project)
 
 
 class DomainType(models.TextChoices):

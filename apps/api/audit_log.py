@@ -52,6 +52,9 @@ class AuditAction:
     DEPLOYMENT_FAILED = "deployment.failed"
     DEPLOYMENT_ACTIVATED = "deployment.active"
     DEPLOYMENT_ROLLED_BACK = "deployment.rolled_back"
+    ARTIFACT_SCAN_COMPLETED = "artifact_scan.completed"
+    ARTIFACT_SCAN_BLOCKED = "artifact_scan.blocked"
+    ARTIFACT_SCAN_OVERRIDE = "artifact_scan.override"
 
     DOMAIN_ADDED = "domain.added"
     DOMAIN_VERIFIED = "domain.verified"
