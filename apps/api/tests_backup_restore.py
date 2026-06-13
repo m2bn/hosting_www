@@ -1,15 +1,18 @@
 import json
 import os
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 
-from apps.api.backups import BackupError, create_backup, restore_to_staging, verify_backup
+from apps.api.backups import BackupError, create_backup, restore_to_staging, verify_backup, _safe_extract_tar
 
 
 class BackupRestoreTests(TestCase):
@@ -76,6 +79,34 @@ class BackupRestoreTests(TestCase):
             call_command("test_restore_backup", str(result.encrypted_path))
             with self.assertRaises(CommandError):
                 call_command("test_restore_backup", str(result.encrypted_path), execute=True, restore_dir=str(self.root / "restore"))
+
+    @override_settings(
+        STATIC_DEPLOYMENT_STORAGE_BACKEND="s3",
+        STATIC_DEPLOYMENT_S3_BUCKET="deployment-backups",
+        STATIC_DEPLOYMENT_S3_ENDPOINT_URL="http://minio.local",
+        STATIC_DEPLOYMENT_S3_REGION="us-east-1",
+    )
+    def test_s3_backup_rejects_object_keys_outside_backup_payload(self):
+        paginator = Mock()
+        paginator.paginate.return_value = [{"Contents": [{"Key": "../escape.txt", "Size": 1, "ETag": "etag"}]}]
+        client = Mock()
+        client.get_paginator.return_value = paginator
+
+        boto3_stub = SimpleNamespace(client=Mock(return_value=client))
+        with patch.dict(sys.modules, {"boto3": boto3_stub}):
+            with self.assertRaises(BackupError):
+                create_backup(output_dir=self.output_dir, encryption_key=self.encryption_key, retention_days=30)
+
+    def test_restore_rejects_tar_link_entries(self):
+        archive_path = self.root / "malicious.tar.gz"
+        with tarfile.open(archive_path, "w:gz") as archive:
+            info = tarfile.TarInfo("payload/link")
+            info.type = tarfile.SYMTYPE
+            info.linkname = "../../outside"
+            archive.addfile(info)
+
+        with self.assertRaises(BackupError):
+            _safe_extract_tar(archive_path, self.root / "restore-links")
 
     def _backup_settings(self):
         return override_settings(

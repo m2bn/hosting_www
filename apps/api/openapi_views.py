@@ -1,4 +1,5 @@
 import json
+from html import escape
 
 from django.http import HttpResponse, JsonResponse
 from django.views import View
@@ -33,14 +34,14 @@ def _render_docs_html(schema, *, include_restricted):
             paths.append(
                 f"""
                 <article class="endpoint{restricted}">
-                  <p class="method">{method}</p>
-                  <h3>{path}</h3>
-                  <p>{spec.get("summary", "")}</p>
-                  <p>{spec.get("description", "")}</p>
+                  <p class="method">{escape(method)}</p>
+                  <h3>{escape(path)}</h3>
+                  <p>{escape(spec.get("summary", ""))}</p>
+                  <p>{escape(spec.get("description", ""))}</p>
                 </article>
                 """
             )
-    schema_json = json.dumps(schema, indent=2)
+    schema_json = escape(json.dumps(schema, indent=2))
     restricted_note = (
         "<p class='notice'>Restricted operator endpoints are visible because your session is an operator session with 2FA.</p>"
         if include_restricted

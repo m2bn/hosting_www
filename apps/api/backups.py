@@ -199,7 +199,7 @@ def _backup_deployment_files(payload_dir, manifest):
         for page in paginator.paginate(Bucket=settings.STATIC_DEPLOYMENT_S3_BUCKET):
             for item in page.get("Contents", []):
                 key = item["Key"]
-                destination = target / key
+                destination = _safe_backup_child_path(target, key)
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 client.download_file(settings.STATIC_DEPLOYMENT_S3_BUCKET, key, str(destination))
                 copied += 1
@@ -252,12 +252,23 @@ def _safe_extract_tar(archive_path, destination):
     destination = destination.resolve()
     with tarfile.open(archive_path, "r:gz") as archive:
         for member in archive.getmembers():
+            if member.issym() or member.islnk():
+                raise BackupError("Backup archive contains a link entry.")
             target = (destination / member.name).resolve()
             try:
                 target.relative_to(destination)
             except ValueError:
                 raise BackupError("Unsafe path in backup archive.")
         archive.extractall(destination)
+
+
+def _safe_backup_child_path(root, relative_name):
+    child = (root / relative_name).resolve()
+    try:
+        child.relative_to(root.resolve())
+    except ValueError as exc:
+        raise BackupError("Unsafe object key in backup source.") from exc
+    return child
 
 
 def _require_encryption_key(encryption_key=None):

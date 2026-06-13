@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from apps.api.auth_utils import totp_code
+from apps.api.auth_utils import create_password_reset_token, totp_code
 from apps.api.models import (
     AuditLog,
     AuthToken,
@@ -145,6 +145,30 @@ class SessionAuthenticationTests(TestCase):
             "auth-password-change",
             {"current_password": "correct-password", "new_password": "new-password"},
         )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get(reverse("auth-me")).status_code, 401)
+
+    def test_password_change_invalidates_other_sessions(self):
+        other_client = Client(enforce_csrf_checks=True)
+        self.post_json("auth-login", {"email": "user@example.com", "password": "correct-password"})
+        self.post_json("auth-login", {"email": "user@example.com", "password": "correct-password"}, client=other_client)
+        self.assertEqual(other_client.get(reverse("auth-me")).status_code, 200)
+
+        response = self.post_json(
+            "auth-password-change",
+            {"current_password": "correct-password", "new_password": "new-password"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(other_client.get(reverse("auth-me")).status_code, 401)
+
+    def test_password_reset_invalidates_existing_sessions(self):
+        self.post_json("auth-login", {"email": "user@example.com", "password": "correct-password"})
+        self.assertEqual(self.client.get(reverse("auth-me")).status_code, 200)
+        raw_token, _ = create_password_reset_token(self.user)
+
+        response = self.post_json("auth-password-reset-confirm", {"token": raw_token, "password": "new-password"})
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.client.get(reverse("auth-me")).status_code, 401)

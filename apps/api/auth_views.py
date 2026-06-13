@@ -16,6 +16,7 @@ from apps.api.auth_utils import (
     generate_recovery_codes,
     encrypt_secret,
     decrypt_secret,
+    invalidate_user_sessions,
     json_error,
     json_ok,
     parse_json_body,
@@ -126,6 +127,7 @@ class PasswordResetConfirmView(View):
             return json_error("Password is required.")
         user.set_password(password)
         user.save(update_fields=["password", "updated_at"])
+        invalidate_user_sessions(user)
         audit_event(request, AuditAction.AUTH_PASSWORD_RESET_COMPLETED, AuditResult.SUCCESS, user=user)
         return json_ok()
 
@@ -145,6 +147,7 @@ class PasswordChangeView(View):
         user = request.user
         user.set_password(new_password)
         user.save(update_fields=["password", "updated_at"])
+        invalidate_user_sessions(user)
         audit_event(request, AuditAction.AUTH_PASSWORD_CHANGED, AuditResult.SUCCESS, user=user)
         logout(request)
         return json_ok()
