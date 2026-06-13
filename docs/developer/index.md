@@ -13,7 +13,8 @@ Ten katalog opisuje, jak lokalnie rozwijać platformę i jak dodawać zmiany bez
 7. [Endpointy, RBAC i multi-tenancy](endpoints-rbac-tenancy.md)
 8. [AuditLog i entitlements](auditlog-and-entitlements.md)
 9. [Bezpieczeństwo i Definition of Secure Done](security-and-secure-done.md)
-10. [Checklist przed pull requestem](pull-request-checklist.md)
+10. [API documentation](api-documentation.md)
+11. [Checklist przed pull requestem](pull-request-checklist.md)
 
 ## Najważniejsze zasady
 

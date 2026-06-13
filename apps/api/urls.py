@@ -1,9 +1,11 @@
 from django.urls import path
 
-from apps.api import api_key_views, artifact_scan_views, auth_views, billing_views, certificate_views, container_deployment_views, data_protection_views, domain_views, metering_views, operator_views, organization_views, project_views, secret_views, static_deployment_views
+from apps.api import api_key_views, artifact_scan_views, auth_views, billing_views, certificate_views, container_deployment_views, data_protection_views, domain_views, metering_views, openapi_views, operator_views, organization_views, project_views, secret_views, static_deployment_views
 
 
 urlpatterns = [
+    path("schema/", openapi_views.OpenApiSchemaView.as_view(), name="api-schema"),
+    path("docs/", openapi_views.ApiDocsView.as_view(), name="api-docs"),
     path("auth/csrf/", auth_views.CsrfTokenView.as_view(), name="auth-csrf"),
     path("auth/register/", auth_views.RegisterView.as_view(), name="auth-register"),
     path("auth/login/", auth_views.LoginView.as_view(), name="auth-login"),
